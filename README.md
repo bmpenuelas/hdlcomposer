@@ -3,7 +3,7 @@
 
 <br><br>
 
-:v: With ghdl_tools all you need to do is:
+:v: With ghdl_tools all you need to do to run a simulation is:
 ```
 ghdl_tools MyModule_tb
 ```
