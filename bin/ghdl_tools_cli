@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+
+import sys
+from   argparse import ArgumentParser
+
+import ghdl_tools
+
+
+
+###############################################################################
+# COMMAND LINE PARAMETERS
+###############################################################################
+
+# Command line interface
+parser = ArgumentParser(description="example: ghdl_tools rasterizer_tb")
+
+# Optional arguments
+parser.add_argument("-v", "--verbose", dest="verbose",
+                    help="Print progress messages. \
+                    E.g. -v",
+                    action='store_true')
+parser.add_argument("-t", "--run_time", dest="run_time",
+                    help="Define how long the simulation should run (unless \
+                    stopped by the tb itself). Defaults to 1us. \
+                    E.g. -t 100us",
+                    metavar="TIME")
+parser.add_argument("-srcs", "--sources_directories", dest="sources_directories",
+                    help="Directories where the sources and testbenches can be found. \
+                    They will be searched recursively for VHDL files. Defaults to the \
+                    current working directory. \
+                    E.g. -srcs ./Rtl ./IP ./Sim",
+                    metavar="SOURCES", nargs='+')
+parser.add_argument("-s", "--source_files", dest="source_files",
+                    help="Source files paths. \
+                    E.g. -s ./Rtl/Rasterizer/top.vhd ./Sim/Rasterizer/top_tb.vhd",
+                    metavar="SOURCE", nargs='+')
+parser.add_argument("-incl", "--include_only", dest="include_files",
+                    help="Specify the FILENAMES that should be used for simulation \
+                    and ignore the rest. It is recommended that you provide this \
+                    argument and/or -srcs to avoid analyzing unnecessary \
+                    files. \
+                    E.g. -incl FIR.vhd tb_FIR.vhd",
+                    metavar="FILENAMES", nargs='+')
+parser.add_argument("-excl", "--exclude_files", dest="exclude_files",
+                    help="Specify the FILENAMES that should be excluded even though \
+                    they match the other filters. \
+                    E.g. -excl ROM_form.vhd",
+                    metavar="FILENAMES", nargs='+')
+parser.add_argument("-w", "--workdir", dest="workdir",
+                    help="WORK folder path. Defaults to ./work \
+                    E.g. -w ./my_workdir",
+                    metavar="WORK", nargs='+')
+parser.add_argument("-wav", "--waves_dir", dest="waves_dir",
+                    help="Directory that contains the waveforms. Defaults to ./waves. \
+                    You can provide a relative path from the testbench directory, \
+                    or an absolute path. A separate folder will be used \
+                    for each testbench. Defaults to ./waves\
+                    E.g. -wav ./my_waveforms will look for waves in \
+                    <testbench_dir>/my_waveforms/<testbench>/",
+                    metavar="WAVES")
+parser.add_argument("-nri", "--dont_reimport", dest="dont_reimport",
+                    help="Do not import files if a previous compilation folder is found \
+                    E.g. -nri",
+                    action='store_true')
+parser.add_argument("-vhdl", "--vhdl_standard", dest="vhdl_standard",
+                    help="Choose v93 or v2008 VHDL STANDARD. Defaults to 93. \
+                    E.g. -vhdl 2008",
+                    metavar="STANDARD")
+parser.add_argument("-gi", "--ghdl_install_path", dest="ghdl_install_path",
+                    help="GHDL INSTALL directory. It contains /bin, /include, /lib... \
+                    Defaults to C:/GHDL \
+                    E.g. -gi C:/Programs/GHDL",
+                    metavar="INSTALL")
+parser.add_argument("-cv", "--compile_vendor", dest="compile_vendor",
+                    help="Compile VENDOR libraries.  Requires --ghdl_install_path. Params: \
+                    Vendor name, Vendor install path, [Output path]. \
+                    Output path defaults to ./compiled/vendor \
+                    E.g. -cv xilinx-vivado C:/Xilinx/Vivado/2017.2",
+                    nargs='+')
+parser.add_argument("-cl", "--compiled_libs_paths", dest="compiled_libs_paths",
+                    help="Paths where compiled libraries can be found. The paths provided \
+                    here will be searched recursively. Defaults to ./compiled \
+                    E.g. -cl ./vendor",
+                    nargs='+')
+parser.add_argument("-tree", "--show_tree", dest="show_tree",
+                    help="Parse the GHDL output and show the extracted architecture tree. \
+                    E.g. -tree",
+                    action='store_true')
+# Positional arguments
+parser.add_argument(dest="testbench",
+                    help="Specify one (or more) TESTBENCH entity to run. \
+                    E.g. Interpolate_tb UpConverter_tb",
+                    metavar="TESTBENCH", nargs='*')
+
+# Get cli args
+if len(sys.argv)==1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+args                 = parser.parse_args()
+args_dict            = vars(args)
+
+###############################################################################
+# Configure GHDL
+###############################################################################
+
+ghdl = ghdl_tools.ghdl.GHDL(
+    verbose=args_dict['verbose'],
+    install_path=args_dict['ghdl_install_path'],
+    vhdl_standard=args_dict['vhdl_standard'],
+    work_dir_path=args_dict['workdir'],
+    compiled_libs_paths=args_dict['compiled_libs_paths'],
+    always_reimport=(not args_dict['dont_reimport']),
+    sources_directories=(args_dict['sources_directories'] or []),
+    sources_paths=args_dict['source_files'],
+    exclude_files=args_dict['exclude_files'],
+    testbench=args_dict['testbench'],
+    waves_dir=args_dict['waves_dir'],
+)
+
+
+# Compile vendor libraries
+compile_vendor = args_dict['compile_vendor']
+if compile_vendor:
+    if not (len(compile_vendor) in [2, 3]):
+        raise ValueError('ERROR Incorrect number of parameters for --compile_vendor')
+    else:
+        args = {
+            'vendor_name': compile_vendor[0],
+            'vendor_install_path': compile_vendor[1],
+        }
+        if len(compile_vendor) > 2:
+            args['output_path'] = compile_vendor[2]
+        err, term = ghdl.compile_vendor(**args)
+
+
+# Parse the architecture
+run_time = args_dict['run_time']
+show_tree = args_dict['show_tree']
+if show_tree:
+    ghdl.parse(show_output=True)
+
+
+# Run the simulation(s)
+if not show_tree or run_time:
+    ghdl.run(run_time)
