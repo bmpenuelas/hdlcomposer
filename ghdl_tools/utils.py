@@ -1,5 +1,6 @@
-import os
-from subprocess import check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError
+from os         import (listdir, walk)
+from os.path    import (normpath, abspath, join, isdir)
+from subprocess import (check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError)
 
 
 
@@ -9,26 +10,32 @@ from subprocess import check_output, Popen, DEVNULL, STDOUT, check_call, CalledP
 ###############################################################################
 
 def save_txt(text, path):
+    """ Save text string as file
+    """
     with open(path, "w+") as f:
         f.write(''.join(text.split('\n')))
 
 
 
-def getBit(y, x):
+def get_bit(y, x):
+    """ Get single bit at index
+    """
     return str((x>>y)&1)
 
 
 
 def int_tobin(x, count=8):
+    """ Integer to binary string
+    """
     shift = range(count-1, -1, -1)
-    bits = map(lambda y: getBit(y, x), shift)
+    bits = map(lambda y: get_bit(y, x), shift)
     return "".join(bits)
 
 
 
 def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
-    """Generate a VHDL package with the provided constants.
-    
+    """ Generate a VHDL package with the provided constants
+
     Data can be provided as integer or as a binary representation string.
     Width will be extended according to the type.
 
@@ -66,13 +73,14 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
 
         package_name (str): Package name.
         file_path (str): Output file path.
+
     Returns:
         bool: The return value. True for error, False otherwise.
     """
 
     package_text = []
     package_text.append('')
-    
+
     package_text.append('library   ieee;')
     package_text.append('use       ieee.std_logic_1164.all;')
     package_text.append('use       ieee.numeric_std.all;')
@@ -123,7 +131,7 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
 
         if is_array:
             package_text[-1] += '('
-            
+
 
         for i in range(array_len):
             data_i = data_dict[constant_name]['data'][i]
@@ -163,13 +171,19 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
     package_text.append('end ' + package_name + ';')
 
 
-    with open(file_path, 'w') as f: 
+    with open(file_path, 'w') as f:
         for line in package_text:
             f.write(line + '\n')
 
 
 
 def run_console_command(command):
+    """ Run a command in the console
+
+    Returns:
+        error
+        terminal_output
+    """
     try:
         terminal_output = check_output(command, shell=True)
         error = 0
@@ -185,35 +199,47 @@ def run_console_command(command):
 
 
 def get_dirs_inside(dir_path):
-    scan_folder = os.path.normpath(dir_path)
-    return [os.path.abspath(os.path.join(scan_folder, d)) for d in os.listdir(scan_folder) 
-           if os.path.isdir(os.path.join(scan_folder, d))]
+    """ Get a list of all the subdirectories inside a given directory
+    """
+    scan_folder = normpath(dir_path)
+    return [abspath(join(scan_folder, d)) for d in listdir(scan_folder)
+            if isdir(join(scan_folder, d))]
 
 
 
 def get_filepaths_recursive(dir_path, extensions=[], include_files=[], exclude_files=[]):
-    scan_folder = os.path.normpath(dir_path)
+    """ Get a list of all the files inside a given directory
+
+    This function is recursive, it will scan all directories inside
+    every subdirectory recursively.
+    """
+    scan_folder = normpath(dir_path)
     file_paths = []
 
-    for root, dirs, files in os.walk(scan_folder):
+    for root, dirs, files in walk(scan_folder):
         for file in files:
             if (not(include_files) or (file in include_files)) and (file not in exclude_files):
                 if extensions:
                     for extension in [ext.lower() for ext in extensions]:
                         if file.lower().endswith(extension):
-                            file_path = os.path.join(root, file)
+                            file_path = join(root, file)
                             file_paths.append(file_path)
                 else:
-                    file_path = os.path.join(root, file)
+                    file_path = join(root, file)
                     file_paths.append(file_path)
     return file_paths
 
 
 
 def get_dirs_containing_files(dir_path, extension=None):
-    scan_folder = os.path.normpath(dir_path)
+    """ Get a list of all the directories that contain a file with the given extension
+
+    Extension is optional (to find non-empty directories). This function is recursive,
+    it will scan all directories inside every subdirectory recursively.
+    """
+    scan_folder = normpath(dir_path)
     found_dirs = []
-    for root, dirs, files in os.walk(scan_folder):
+    for root, dirs, files in walk(scan_folder):
         for file in files:
             if (not extension) or file.lower().endswith(extension.lower()):
                 found_dirs.append(root)
@@ -222,7 +248,11 @@ def get_dirs_containing_files(dir_path, extension=None):
 
 
 def gtkwave_open_wave(ghw_path, gtkw_file=''):
-    command_open_wave = 'gtkwave ' + ghw_path
+    """ Open a ghw file in GTKWave
+
+    Optionally, you can provide a gtkw file too.
+    """
+    command_open_wave = 'gtkwave "' + ghw_path + '"'
     if gtkw_file:
-        command_open_wave += ' -a ' + gtkw_file
+        command_open_wave += ' -a "' + gtkw_file + '"'
     Popen(command_open_wave, stdout=DEVNULL, stderr=STDOUT)

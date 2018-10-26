@@ -1,4 +1,4 @@
-from   re import sub
+from   re                             import sub
 from   ghdl_tools.regular_expressions import *
 from   ghdl_tools.vhdl_units          import *
 

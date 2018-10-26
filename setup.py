@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='ghdl_tools',
-    version='0.1',
+    version='0.2',
     description='Effortless GHDL simulation automation, VHDL architecture parsing, object-oriented representation and more tools to accelerate HDL development.',
     long_description=readme(),
     classifiers=[
