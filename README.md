@@ -20,3 +20,5 @@ ghdl_tools MyModule_tb
 :star: Compile and include vendor libraries
 
 :star: Handle multiple testbenches with several user-defined wave views in a single run
+
+:star: Generate stimuli VHDL packages
