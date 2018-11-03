@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys
+from   sys      import (argv, stderr, exit)
 from   argparse import ArgumentParser
 
 import ghdl_tools
@@ -30,7 +30,7 @@ parser.add_argument("-srcs", "--sources_directories", dest="sources_directories"
                     They will be searched recursively for VHDL files. Defaults to the \
                     current working directory. \
                     Example: -srcs ./Rtl ./IP ./Sim",
-                    metavar="SOURCES", nargs='+')
+                    metavar="SRCS_DIR", nargs='+')
 parser.add_argument("-s", "--source_files", dest="source_files",
                     help="Source files paths. \
                     Example: -s ./Rtl/Rasterizer/top.vhd ./Sim/Rasterizer/top_tb.vhd",
@@ -41,12 +41,12 @@ parser.add_argument("-incl", "--include_only", dest="include_files",
                     argument and/or -srcs to avoid analyzing unnecessary \
                     files. \
                     Example: -incl FIR.vhd tb_FIR.vhd",
-                    metavar="FILENAMES", nargs='+')
+                    metavar="FILENAME", nargs='+')
 parser.add_argument("-excl", "--exclude_files", dest="exclude_files",
                     help="Specify the FILENAMES that should be excluded even though \
                     they match the other filters. \
                     Example: -excl ROM_form.vhd",
-                    metavar="FILENAMES", nargs='+')
+                    metavar="FILENAME", nargs='+')
 parser.add_argument("-w", "--workdir", dest="workdir",
                     help="WORK folder path. Defaults to ./work \
                     Example: -w ./my_workdir",
@@ -77,12 +77,12 @@ parser.add_argument("-cv", "--compile_vendor", dest="compile_vendor",
                     Vendor name, Vendor install path, [Output path]. \
                     Output path defaults to ./compiled/vendor \
                     Example: -cv xilinx-vivado C:/Xilinx/Vivado/2017.2",
-                    nargs='+')
+                    metavar="VENDOR", nargs='+')
 parser.add_argument("-cl", "--compiled_libs_paths", dest="compiled_libs_paths",
                     help="Paths where compiled libraries can be found. The paths provided \
                     here will be searched recursively. Defaults to ./compiled \
                     Example: -cl ./vendor",
-                    nargs='+')
+                    metavar="LIB_PATH", nargs='+')
 parser.add_argument("-tree", "--show_tree", dest="show_tree",
                     help="Parse the GHDL output and show the extracted architecture tree. \
                     Example: -tree",
@@ -94,9 +94,9 @@ parser.add_argument(dest="testbench",
                     metavar="TESTBENCH", nargs='*')
 
 # Get cli args
-if len(sys.argv)==1:
-    parser.print_help(sys.stderr)
-    sys.exit(1)
+if len(argv)==1:
+    parser.print_help(stderr)
+    exit(1)
 args                 = parser.parse_args()
 args_dict            = vars(args)
 
@@ -106,16 +106,16 @@ args_dict            = vars(args)
 
 ghdl = ghdl_tools.ghdl.GHDL(
     verbose=args_dict['verbose'],
-    install_path=args_dict['ghdl_install_path'],
-    vhdl_standard=args_dict['vhdl_standard'],
-    work_dir_path=args_dict['workdir'],
-    compiled_libs_paths=args_dict['compiled_libs_paths'],
+    install_path=args_dict['ghdl_install_path'] or None,
+    vhdl_standard=args_dict['vhdl_standard'] or None,
+    work_dir_path=args_dict['workdir'] or None,
+    compiled_libs_paths=args_dict['compiled_libs_paths'] or None,
     always_reimport=(not args_dict['dont_reimport']),
-    sources_directories=(args_dict['sources_directories'] or []),
-    sources_paths=args_dict['source_files'],
-    exclude_files=args_dict['exclude_files'],
-    testbench=args_dict['testbench'],
-    waves_dir=args_dict['waves_dir'],
+    sources_directories=(args_dict['sources_directories'] or None),
+    sources_paths=args_dict['source_files'] or None,
+    exclude_files=args_dict['exclude_files'] or None,
+    testbench=args_dict['testbench'] or None,
+    waves_dir=args_dict['waves_dir'] or None,
 )
 
 

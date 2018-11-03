@@ -1,4 +1,4 @@
-from os         import (listdir, walk)
+from os         import (listdir, walk, getcwd)
 from os.path    import (normpath, abspath, join, isdir)
 from subprocess import (check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError)
 
@@ -33,11 +33,15 @@ def int_tobin(x, count=8):
 
 
 
-def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
+def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
     """ Generate a VHDL package with the provided constants
 
-    Data can be provided as integer or as a binary representation string.
+    Data can be provided as integer or as a binary representation string, or even
+    a mix of the two.
     Width will be extended according to the type.
+
+    Supported types: boolean, std_logic, std_logic_vector, integer, signed, unsigned
+                     (and arrays of those types)
 
     Args:
         data_dict (dict): A dictionary containing all the signals to be
@@ -45,26 +49,28 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
 
             data_dict = {
                 'constant_0': {
-                    'data': [1, '0'],
-                    'type': 'std_logic',
-                    'width': None,
+                    'data': [1, '0', 'true'],
+                    'type': 'boolean'
                 },
                 'constant_1': {
-                    'data': 8,
-                    'type': 'integer',
-                    'width': None,
+                    'data': [1, '0'],
+                    'type': 'std_logic'
                 },
                 'constant_2': {
+                    'data': 8,
+                    'type': 'integer'
+                },
+                'constant_3': {
                     'data': [244, 1, -1, '11100', '0101'],
                     'type': 'signed',
                     'width': 9,
                 },
-                'constant_3': {
+                'constant_4': {
                     'data': ['1001', 1, 32],
                     'type': 'unsigned',
                     'width': 17,
                 },
-                'constant_4': {
+                'constant_5': {
                     'data': [24, 8932, '10101110110110', 142],
                     'type': 'std_logic_vector',
                     'width': 14,
@@ -77,6 +83,9 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
     Returns:
         bool: The return value. True for error, False otherwise.
     """
+
+    if not file_path:
+        file_path = join(getcwd(), package_name + '.vhd')
 
     package_text = []
     package_text.append('')
@@ -91,7 +100,7 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
 
 
     for constant_name in data_dict.keys():
-        data_w = data_dict[constant_name]['width']
+        data_w = data_dict[constant_name]['width'] if ('width' in data_dict[constant_name].keys()) else None
         data_type = data_dict[constant_name]['type']
 
         package_text.append(' ' * 1 * indentation)
@@ -108,7 +117,7 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
             package_text[-1] += 'type T_' + constant_name.upper() + ' is array(0 to '
             package_text[-1] += str(array_len) + ' - 1) of '
 
-            if data_type in ('std_logic', 'integer'):
+            if data_type in ('boolean', 'std_logic', 'integer'):
                 package_text[-1] += data_type + ';'
             else:
                 package_text[-1] += data_type + '(' + str(data_w)
@@ -121,7 +130,7 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
         if is_array:
             package_text[-1] += 'T_' + constant_name.upper()
         else:
-            if data_type in ('std_logic', 'integer'):
+            if data_type in ('boolean', 'std_logic', 'integer'):
                 package_text[-1] += data_type
             else:
                 package_text[-1] += data_type + '(' + str(data_w)
@@ -139,7 +148,12 @@ def create_vhdl_package(data_dict, package_name, file_path, indentation=2):
             if is_array:
                 package_text.append(' ' * 2 * indentation)
 
-            if data_type in 'std_logic':
+            if data_type in 'boolean':
+                boolean_value = 'true' if (data_i and (isinstance(data_i, str) \
+                                       and data_i.lower() not in ('false', '0'))) \
+                                       else 'false'
+                package_text[-1] += boolean_value
+            elif data_type in 'std_logic':
                 package_text[-1] += '\'' + str(data_i) + '\''
             elif data_type in 'integer':
                 package_text[-1] += str(data_i)

@@ -210,7 +210,7 @@ class GHDL():
     def __init__(self, verbose=False, install_path=None, vhdl_standard=None,
                  work_dir_path=None, compiled_libs_paths=None, always_reimport=True,
                  sources_directories=None, sources_paths=None, exclude_files=None,
-                 testbench=None, waves_dir=''):
+                 testbench=None, waves_dir=None):
         self.verbose = verbose
         self.vhdl_standard = vhdl_standard or '93'
         self.work_dir_path = normpath(work_dir_path) if work_dir_path else join(getcwd(), normpath('./work/'))
@@ -224,12 +224,12 @@ class GHDL():
         self.load_config_from_file()
         if install_path:
             self.install_path = install_path
-        elif exists('C:/GHDL'):
-            self.install_path = 'C:/GHDL'
-        elif exists('C:/Progra~1/GHDL'):
-            self.install_path = 'C:/Progra~1/GHDL'
-        elif exists('C:/Progra~2/GHDL'):
-            self.install_path = 'C:/Progra~2/GHDL'
+        else:
+            for try_path in ('C:/GHDL', 'C:/Programs/GHDL', 'D:/GHDL', 'D:/Programs/GHDL',
+                             'C:/Progra~1/GHDL', 'C:/Progra~2/GHDL'):
+                if exists(try_path):
+                    self.install_path = try_path
+                    break
 
         self.always_reimport = always_reimport
         self.exclude_files = exclude_files or []
@@ -520,8 +520,22 @@ class GHDL():
         """
         run_time = run_time or '1us'
 
+        if self.verbose:
+            if self.testbench:
+                stdout.write(
+                    ' '.join([
+                        'Running testbench' + ('es' if (len(self.testbench) > 1) else ''),
+                        ' '.join([entity for entity in self.testbench]),
+                        '\n'
+                    ])
+                )
+            else:
+                stdout.write('No testbench selected\n')
+
+
         # Import
-        self.import_sources()
+        if self.testbench:
+            self.import_sources()
 
         # Make
         for entity in self.testbench:
