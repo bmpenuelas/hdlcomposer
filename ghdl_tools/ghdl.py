@@ -193,6 +193,7 @@ class SetExt(set):
         self.update(data)
 
 
+
 ###############################################################################
 # GHDL
 ###############################################################################
@@ -316,7 +317,7 @@ class GHDL():
         if not isinstance(directory_paths, list):
             directory_paths = [directory_paths]
         for directory_path in directory_paths:
-            self.compiled_libs_paths.update(get_dirs_containing_files(directory_path, extension='.cf'))
+            self.compiled_libs_paths.update([abspath(directory) for directory in get_dirs_containing_files(directory_path, extension='.cf')])
 
 
 
@@ -476,7 +477,7 @@ class GHDL():
             import_error, terminal_output, import_command, units_description = self.import_file(file_path)
 
             if import_error:
-                stdout.write('\nERROR Importing ' + file_path + terminal_output + '\n' +
+                stdout.write('\nERROR Importing ' + file_path + '\n' + terminal_output + '\n' +
                              'For more details, you can run:\n' + import_command + '\n')
             else:
                 if self.verbose:
@@ -552,6 +553,9 @@ class GHDL():
 
                 if error_occurred:
                     stdout.write('ERROR Running testbench ' + entity + '\n')
+                    stdout.write(run_terminal_output + '\n')
+                elif 'report' in run_terminal_output:
+                    stdout.write('Output of testbench run ' + entity + '\n')
                     stdout.write(run_terminal_output + '\n')
 
                 # Open wave files

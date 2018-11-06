@@ -3,32 +3,107 @@
 # Object-Oriented VHDL Units representation
 ###############################################################################
 
-TAB = 2
+# Constants
 
+TAB = 2
 GENERATE_STATEMENTS = ['if-generate', 'for-generate']
 
 
-def print_children(element):
-    print(' ' * element.indentation + str(element))
-    if element.children:
-        for child in element.children:
-            print_children(child)
+
+# Classes
+
+class Tick():
+
+    def __init__(self, initial_value=0):
+        self.current_value = initial_value
 
 
 
+    def __repr__(self):
+        return 'Clock at tick ' + str(self.current_value)
 
-class Unit:
+
+
+    def tick(self, increment=1):
+        self.current_value += increment
+
+
+
+    @property
+    def now(self):
+        return self.current_value
+
+    @now.setter
+    def now(self, value):
+        self.current_value = value
+
+
+
+class Signal():
+    """Represent a signal and encode it in Value-Duration format
+    """
+
+    def __init__(self, initial_value, clock=None, signal_type=None, signal_width=None):
+        self.clock = clock
+        self.type = signal_type
+        self.width = signal_width
+
+        self.waveform = [[initial_value, None],]
+        self.last_change = 0
+
+
+
+    def __repr__(self):
+        return 'Signal - current value: ' + str(self.waveform[-1][0])
+
+
+
+    def append(self, new_value, current_tick=None):
+        if not (current_tick or self.clock):
+            raise ValueError('ERROR No clock or current_tick provided')
+        if new_value != self.waveform[-1][0]:
+            self.waveform[-1][1] = (current_tick or self.clock.now) - self.last_change
+            self.last_change = (current_tick or self.clock.now)
+            self.waveform.append([new_value, None])
+
+
+
+    def end(self, current_tick=None):
+        if not (current_tick or self.clock):
+            raise ValueError('ERROR No clock or current_tick provided')
+        self.waveform[-1][1] = (current_tick or self.clock.now) - self.last_change
+        self.last_change = (current_tick or self.clock.now)
+
+
+
+class Unit():
+    """Base unit with common properties
+    """
+
     def __init__(self, name, parent, indentation):
         self.name = name
         self.parent = parent
         self.indentation = indentation
 
+
+
     def print_children(self):
-        print_children(self)
+        self.print_hierarchy(self)
+
+
+
+    @staticmethod
+    def print_hierarchy(element):
+        print(' ' * element.indentation + str(element))
+        if element.children:
+            for child in element.children:
+                element.print_hierarchy(child)
 
 
 
 class Generate(Unit):
+    """If-generate or for-generate statements
+    """
 
     def __init__(self, name, parent, indentation, value, generates=None, instances=None):
         super().__init__(name, parent, indentation)
@@ -57,8 +132,9 @@ class Generate(Unit):
 
 
 
-
 class Entity(Unit):
+    """VHDL Entity
+    """
 
     def __init__(self, name, parent, indentation, arch='', generates=None, instances=None,
                  ports=None, signals=None, processes=None):
@@ -91,8 +167,9 @@ class Entity(Unit):
 
 
 
-
 class Instance(Unit):
+    """Instance of a VHDL entity
+    """
 
     def __init__(self, name, indentation, parent=None, entity=None):
         super().__init__(name, parent, indentation)
@@ -120,8 +197,10 @@ class Instance(Unit):
 
 
 
-
 class Top(Instance):
-      def __init__(self, name, packages=None):
+    """Top entity
+    """
+
+    def __init__(self, name, packages=None):
         super().__init__(name, parent=None, indentation=-TAB)
         self.packages = packages or []

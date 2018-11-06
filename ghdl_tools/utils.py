@@ -49,7 +49,7 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
 
             data_dict = {
                 'constant_0': {
-                    'data': [1, '0', 'true'],
+                    'data': [1, '0'],
                     'type': 'boolean'
                 },
                 'constant_1': {
@@ -58,7 +58,8 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
                 },
                 'constant_2': {
                     'data': 8,
-                    'type': 'integer'
+                    'type': 'integer',
+                    'width': None,
                 },
                 'constant_3': {
                     'data': [244, 1, -1, '11100', '0101'],
@@ -188,6 +189,22 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
     with open(file_path, 'w') as f:
         for line in package_text:
             f.write(line + '\n')
+
+
+
+def signals_to_package(signals, package_name):
+    package_config = {}
+    for signal_name in signals.keys():
+        package_config[signal_name.upper() + '_V'] = {
+            'data': [data[0] for data in signals[signal_name].waveform],
+            'type': signals[signal_name].type,
+            'width': signals[signal_name].width,
+        }
+        package_config[signal_name.upper() + '_D'] = {
+            'data': [data[1] for data in signals[signal_name].waveform],
+            'type': 'integer',
+        }
+    create_vhdl_package(package_config, package_name)
 
 
 
