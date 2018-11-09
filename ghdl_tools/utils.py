@@ -155,7 +155,7 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
                                        else 'false'
                 package_text[-1] += boolean_value
             elif data_type in 'std_logic':
-                package_text[-1] += '\'' + str(data_i) + '\''
+                package_text[-1] += '\'1\'' if data_i else '\'0\''
             elif data_type in 'integer':
                 package_text[-1] += str(data_i)
             elif data_type in ('signed', 'unsigned', 'std_logic_vector'):

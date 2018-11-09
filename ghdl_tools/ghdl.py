@@ -22,16 +22,17 @@ from   ghdl_tools.parse               import (parse, parse_included)
 ###############################################################################
 
 def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_path,
-                   standard='93', recompile=False, verbose=False):
+                   vhdl_standard='93c', recompile=False, verbose=False):
     """ Compile vendor libraries
 
     For a list of supported libraries check your GHDL version.
     This should be run once in the system, the compiled result can be reused by
     pointing to the compiled output directory.
     """
-    if standard == '93':
+
+    if vhdl_standard in ('93', '93c', 93):
         vhdl_standard = 'VHDL93'
-    elif standard == '2008':
+    elif vhdl_standard in ('2008', '08', 2008, 8):
         vhdl_standard = 'VHDL2008'
     else:
         raise ValueError('Invalid VHDL standard. Valid values are 93, 2008')
@@ -72,13 +73,15 @@ def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_p
 
 
 
-def import_file(file_path, workdir):
+def import_file(file_path, workdir, vhdl_standard='93c'):
     """ Import and get the entity and architectures present in the file
     """
+
     file_path = normpath(file_path)
     workdir = normpath(workdir)
     import_command = \
         'ghdl -i -v --ieee=synopsys -fexplicit' + \
+        ((' --std=' + str(vhdl_standard)) if vhdl_standard else '') + \
         ' --workdir="' + workdir + '"' + \
         ' "' + file_path + '"'
     command_run_result = run_console_command(import_command)
@@ -89,15 +92,17 @@ def import_file(file_path, workdir):
 
 
 
-def make_entity(entity_name, workdir, additional_libs):
+def make_entity(entity_name, workdir, additional_libs, vhdl_standard='93c'):
     """ Compile the imported files
 
     Requires previous import_file.
     """
+
     workdir = normpath(workdir)
     additional_libs = ' -P' + ' -P'.join(additional_libs) if additional_libs else ''
     make_command = \
         'ghdl -m -v --ieee=synopsys -fexplicit' + \
+        ((' --std=' + str(vhdl_standard)) if vhdl_standard else '') + \
         ' --workdir="' + workdir + '"' + \
         additional_libs + \
         ' ' + entity_name
@@ -108,6 +113,7 @@ def make_entity(entity_name, workdir, additional_libs):
 def dump_xml_file(file_path, workdir, additional_libs, output_file_path):
     """ Generate a (large) XML representation of the VHDL code
     """
+
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
     output_file_path = abspath(output_file_path)
     dump_xml_command = \
@@ -126,6 +132,7 @@ def generate_cross_references_html(file_path, workdir, additional_libs, output_p
 
     Requires previous make_entity.
     """
+
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
     if output_path:
         output_path = abspath(output_path)
@@ -145,6 +152,7 @@ def generate_cross_references_html(file_path, workdir, additional_libs, output_p
 def analyze_file(file_path, workdir, additional_libs):
     """ Analyze source file (-a)
     """
+
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
     analyze_command = \
         'ghdl -a -v --ieee=synopsys -fexplicit' + \
@@ -158,6 +166,7 @@ def analyze_file(file_path, workdir, additional_libs):
 def elaborate_entity(entity_name, workdir):
     """ Elaborate source file (-e)
     """
+
     elaborate_command = \
         'ghdl -e -v --ieee=synopsys -fexplicit' + \
         ' --workdir="' + workdir + '"' + \
@@ -172,6 +181,7 @@ def run_tb(testbench_name, workdir, run_time='1us'):
     Provide the entity name in the testbench, not the file name.
     Requires previous (-a, -e) or (-i, -m).
     """
+
     workdir = normpath(workdir)
     run_command = \
         'ghdl -r -v --ieee=synopsys -fexplicit' + \
@@ -186,6 +196,7 @@ def run_tb(testbench_name, workdir, run_time='1us'):
 class SetExt(set):
     """ Extend the class set
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -213,7 +224,7 @@ class GHDL():
                  sources_directories=None, sources_paths=None, exclude_files=None,
                  testbench=None, waves_dir=None):
         self.verbose = verbose
-        self.vhdl_standard = vhdl_standard or '93'
+        self.vhdl_standard = vhdl_standard or '93c'
         self.work_dir_path = normpath(work_dir_path) if work_dir_path else join(getcwd(), normpath('./work/'))
 
         if compiled_libs_paths:
@@ -267,12 +278,12 @@ class GHDL():
 
 
     def __repr__(self):
-        return 'GHDL configuration'
+        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
 
 
 
     def __str__(self):
-        return 'GHDL VHDL ' + self.vhdl_standard
+        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
 
 
 
@@ -314,6 +325,9 @@ class GHDL():
 
 
     def add_compiled_libs(self, directory_paths):
+        """ Find the paths that contain compiled libs and add them to compiled_libs_paths
+        """
+
         if not isinstance(directory_paths, list):
             directory_paths = [directory_paths]
         for directory_path in directory_paths:
@@ -324,6 +338,7 @@ class GHDL():
     def compile_vendor(self, vendor_name, vendor_install_path, output_path='./compiled/vendor', recompile=False):
         """ compile_vendor wrapper
         """
+
         output_path = join(normpath(output_path), vendor_name)
         if not self.install_path:
             raise ValueError('compile_vendor requires GHDL install_path')
@@ -356,6 +371,7 @@ class GHDL():
                 used. The path is automatically found.
             exclude_files: File names in this list will not be used.
         """
+
         vhd_paths = set()
         for src_folder in sources_directories:
             vhd_paths.update( get_filepaths_recursive(src_folder, extensions, include_files, exclude_files) )
@@ -368,7 +384,8 @@ class GHDL():
     def import_file(self, file_path):
         """ Import file and save the results
         """
-        error, terminal_output, import_command, units_description = import_file(file_path, self.work_dir_path)
+
+        error, terminal_output, import_command, units_description = import_file(file_path, self.work_dir_path, self.vhdl_standard)
         if not error:
             for unit_description in units_description:
                 if unit_description[0] == 'entity':
@@ -384,13 +401,15 @@ class GHDL():
     def make_entity(self, entity):
         """ make_entity wrapper
         """
-        return make_entity(entity, self.work_dir_path, self.compiled_libs_paths)
+
+        return make_entity(entity, self.work_dir_path, self.compiled_libs_paths, self.vhdl_standard)
 
 
 
     def dump_xml_file(self, file_path, output_file_path):
         """ dump_xml_file wrapper
         """
+
         return dump_xml_file(file_path, self.work_dir_path, self.compiled_libs_paths, output_file_path)
 
 
@@ -398,6 +417,7 @@ class GHDL():
     def generate_cross_references_html(self, file_path, output_path=''):
         """ generate_cross_references_html wrapper
         """
+
         return generate_cross_references_html(file_path, self.work_dir_path, self.compiled_libs_paths, output_path)
 
 
@@ -405,6 +425,7 @@ class GHDL():
     def run_tb(self, entity, run_time):
         """ run_tb wrapper
         """
+
         return run_tb(entity, self.work_dir_path, run_time)
 
 
@@ -412,6 +433,7 @@ class GHDL():
     def parse_entity(self, entity):
         """ Parse an entity architecture
         """
+
         error, terminal_output = run_tb(entity, self.work_dir_path, 0)
         return parse(terminal_output)
 
@@ -422,6 +444,7 @@ class GHDL():
 
         If gtkw files are found, they are used to configure the waveform display.
         """
+
         self.load_config_from_file()
 
         entity_dir = dirname(self.config['imported_entities'][entity.lower()])
@@ -455,6 +478,7 @@ class GHDL():
         The desired paths and other configurations must be set before running
         this procedure.
         """
+
         has_to_import = True
         if exists(self.work_dir_path):
             if not self.always_reimport and get_dirs_containing_files(self.work_dir_path, extension='.cf'):
@@ -501,6 +525,7 @@ class GHDL():
     def parse(self, show_output=False):
         """ Parse all the testbenches
         """
+
         result = []
         for entity in self.testbench:
             result.append(self.parse_entity(entity))
@@ -519,6 +544,7 @@ class GHDL():
 
         Requires previous import self.import_sources or equivalent.
         """
+
         run_time = run_time or '1us'
 
         if self.verbose:
