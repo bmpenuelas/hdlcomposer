@@ -1,7 +1,8 @@
-from os         import (listdir, walk, getcwd)
-from os.path    import (normpath, abspath, join, isdir)
-from subprocess import (check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError)
+from os                    import (listdir, walk, getcwd)
+from os.path               import (normpath, abspath, join, isdir)
+from subprocess            import (check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError)
 
+from ghdl_tools.vhdl_units import (SignalGroup)
 
 
 
@@ -12,6 +13,7 @@ from subprocess import (check_output, Popen, DEVNULL, STDOUT, check_call, Called
 def save_txt(text, path):
     """ Save text string as file
     """
+
     with open(path, "w+") as f:
         f.write(''.join(text.split('\n')))
 
@@ -33,7 +35,7 @@ def int_tobin(x, count=8):
 
 
 
-def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
+def generate_vhdl_package(pkg_cfg, package_name, output_directory=None, indentation=2):
     """ Generate a VHDL package with the provided constants
 
     Data can be provided as integer or as a binary representation string, or even
@@ -44,10 +46,10 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
                      (and arrays of those types)
 
     Args:
-        data_dict (dict): A dictionary containing all the signals to be
+        pkg_cfg (dict): A dictionary containing all the signals to be
             included in the package with the following format:
 
-            data_dict = {
+            pkg_cfg = {
                 'constant_0': {
                     'data': [1, '0'],
                     'type': 'boolean'
@@ -79,14 +81,13 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
             }
 
         package_name (str): Package name.
-        file_path (str): Output file path.
+        output_directory (str): Output path.
 
     Returns:
         bool: The return value. True for error, False otherwise.
     """
 
-    if not file_path:
-        file_path = join(getcwd(), package_name + '.vhd')
+    file_path = join((output_directory or getcwd()), package_name + '.vhd')
 
     package_text = []
     package_text.append('')
@@ -100,18 +101,18 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
     package_text.append('')
 
 
-    for constant_name in data_dict.keys():
-        data_w = data_dict[constant_name]['width'] if ('width' in data_dict[constant_name].keys()) else None
-        data_type = data_dict[constant_name]['type']
+    for constant_name in pkg_cfg.keys():
+        data_w = pkg_cfg[constant_name]['width'] if ('width' in pkg_cfg[constant_name].keys()) else None
+        data_type = pkg_cfg[constant_name]['type']
 
         package_text.append(' ' * 1 * indentation)
 
-        if isinstance(data_dict[constant_name]['data'], list):
+        if isinstance(pkg_cfg[constant_name]['data'], list):
             is_array = True
         else:
             is_array = False
-            data_dict[constant_name]['data'] = [data_dict[constant_name]['data']]
-        array_len = len(data_dict[constant_name]['data'])
+            pkg_cfg[constant_name]['data'] = [pkg_cfg[constant_name]['data']]
+        array_len = len(pkg_cfg[constant_name]['data'])
 
 
         if is_array:
@@ -144,7 +145,7 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
 
 
         for i in range(array_len):
-            data_i = data_dict[constant_name]['data'][i]
+            data_i = pkg_cfg[constant_name]['data'][i]
 
             if is_array:
                 package_text.append(' ' * 2 * indentation)
@@ -192,29 +193,48 @@ def create_vhdl_package(data_dict, package_name, file_path=None, indentation=2):
 
 
 
-def signals_to_package(signals, package_name):
-    package_config = {}
+def vd_files(signal_name, directory_path):
+    """Return a pair of typical file paths for a VHDL signal dump
+    """
+
+    return [join(directory_path, signal_name + '_v.out'), join(directory_path, signal_name + '_d.out')]
+
+
+
+def signals_to_pkg_cfg(signals):
+    """Generate the config structure to generate a VHDL package from a group of signals
+
+    Args:
+        signals: A dictionary like {'signal_name_a': Signal(a), 'signal_name_b': Signal(b), ...} or
+                 a SignalGroup instance.
+    """
+
+    if isinstance(signals, SignalGroup):
+        signals = signals.signals
+
+    pkg_cfg = {}
     for signal_name in signals.keys():
-        package_config[signal_name.upper() + '_V'] = {
+        pkg_cfg[signal_name.upper() + '_V'] = {
             'data': [data[0] for data in signals[signal_name].waveform],
             'type': signals[signal_name].type,
             'width': signals[signal_name].width,
         }
-        package_config[signal_name.upper() + '_D'] = {
+        pkg_cfg[signal_name.upper() + '_D'] = {
             'data': [data[1] for data in signals[signal_name].waveform],
             'type': 'integer',
         }
-    create_vhdl_package(package_config, package_name)
+    return pkg_cfg
 
 
 
 def run_console_command(command):
-    """ Run a command in the console
+    """Run a command in the console
 
     Returns:
         error
         terminal_output
     """
+
     try:
         terminal_output = check_output(command, shell=True)
         error = 0
@@ -232,6 +252,7 @@ def run_console_command(command):
 def get_dirs_inside(dir_path):
     """ Get a list of all the subdirectories inside a given directory
     """
+
     scan_folder = normpath(dir_path)
     return [abspath(join(scan_folder, d)) for d in listdir(scan_folder)
             if isdir(join(scan_folder, d))]
@@ -244,6 +265,7 @@ def get_filepaths_recursive(dir_path, extensions=[], include_files=[], exclude_f
     This function is recursive, it will scan all directories inside
     every subdirectory recursively.
     """
+
     scan_folder = normpath(dir_path)
     file_paths = []
 
@@ -268,6 +290,7 @@ def get_dirs_containing_files(dir_path, extension=None):
     Extension is optional (to find non-empty directories). This function is recursive,
     it will scan all directories inside every subdirectory recursively.
     """
+
     scan_folder = normpath(dir_path)
     found_dirs = []
     for root, dirs, files in walk(scan_folder):
@@ -283,6 +306,7 @@ def gtkwave_open_wave(ghw_path, gtkw_file=''):
 
     Optionally, you can provide a gtkw file too.
     """
+
     command_open_wave = 'gtkwave "' + ghw_path + '"'
     if gtkw_file:
         command_open_wave += ' -a "' + gtkw_file + '"'

@@ -20,7 +20,7 @@ class Tick():
 
 
     def __repr__(self):
-        return 'Clock at tick ' + str(self.current_value)
+        return 'Clock at tick ' + str(self.now)
 
 
 
@@ -47,12 +47,12 @@ class Signal():
     """
 
     def __init__(self, initial_value, clock=None, signal_type=None, signal_width=None,
-                 load_init_from_files=False):
+                 init_files=False):
         self.clock = clock
         self.type = signal_type
         self.width = signal_width
 
-        if load_init_from_files:
+        if init_files:
             self.waveform = []
             value = 'v'
             duration = 'd'
@@ -72,15 +72,16 @@ class Signal():
                     self.waveform.append([value, duration])
         else:
             self.waveform = [[initial_value, None],]
-        self.last_change = 0
-        self.read_tick = 0
+
+        self.next_read_tick = 0
         self.read_block = 0
-        self.block_tick = 0
+        self.read_block_tick = 0
+        self.last_read_value = None
 
 
 
     def __repr__(self):
-        return 'Signal - current value: {' + str(self.waveform[-1][0]) + '}'
+        return 'Signal - final value: ' + str(self.last_value)
 
 
 
@@ -90,15 +91,47 @@ class Signal():
 
 
 
+    @property
+    def last_value(self):
+        return self.waveform[-1][0]
+
+
+
+    def get_value(self, at_tick=None):
+        """Get the value of the signal at a specific tick.
+
+        Args:
+            at_tick: Defaults to last value.
+        """
+
+        if not at_tick or at_tick > self.len:
+            return self.last_value
+        else:
+            current_block = 0
+            accum = at_tick
+            while 1:
+                if accum > (self.waveform[current_block][1] - 1):
+                    accum -= self.waveform[current_block][1]
+                    current_block += 1
+                else:
+                    return self.waveform[current_block][0]
+
+
+
+    @property
+    def current_value(self):
+        return str(self.last_read_value)
+
+
+
     def append(self, new_value, current_tick=None):
         """Add a new value of the signal
         """
 
         if not (current_tick or self.clock):
-            current_tick = self.last_change + 1
+            current_tick = self.len + 1
         if new_value != self.waveform[-1][0]:
-            self.waveform[-1][1] = (current_tick or self.clock.now) - self.last_change
-            self.last_change = (current_tick or self.clock.now)
+            self.waveform[-1][1] = (current_tick or self.clock.now) - self.len
             self.waveform.append([new_value, None])
 
 
@@ -109,35 +142,45 @@ class Signal():
 
         if not (current_tick or self.clock):
             current_tick = self.len + 1
-        self.waveform[-1][1] = (current_tick or self.clock.now) + 1 - self.last_change
-        self.last_change = (current_tick or self.clock.now)
+        if self.waveform[-1][1] == None:
+            self.waveform[-1][1] = (current_tick or self.clock.now) + 1 - self.len
 
 
 
-    def read(self, ticks=1):
+    def read(self, ticks=1, reset=False):
         """Get the signal value at each tick
 
         Args:
-            Number of data ticks to read.
+            ticks: Number of data ticks to read.
+
         Returns:
-            List of [new_value, time] for each transition within the provided
-            number of ticks.
+            current_value: Value of the signal after reading a number of ticks.
+            transitions: List of [new_value, time] for each transition within the provided
+                         number of ticks.
+            last_tick_read: Last tick that was read.
         """
 
+        if reset:
+            self.next_read_tick = 0
+            self.read_block = 0
+            self.read_block_tick = 0
+            self.last_read_value = None
+
         if len(self.waveform) > self.read_block:
-            new_values = []
+            transitions = []
             for i in range(ticks):
-                self.read_tick += 1
-                self.block_tick += 1
-                if self.read_tick == 1:
-                    new_values.append([self.waveform[0][0], 0])
-                elif self.block_tick > self.waveform[self.read_block][1]:
+                if self.next_read_tick == 0:
+                    self.last_read_value = self.waveform[0][0]
+                if self.read_block_tick >= self.waveform[self.read_block][1]:
                     self.read_block += 1
-                    self.block_tick = 0
-                    new_values.append([self.waveform[self.read_block][0], self.read_tick])
-            return new_values
+                    self.read_block_tick = 0
+                    self.last_read_value = self.waveform[self.read_block][0]
+                    transitions.append([self.last_read_value, self.next_read_tick])
+                self.next_read_tick += 1
+                self.read_block_tick += 1
+            return self.current_value, transitions, (self.next_read_tick - 1)
         else:
-            return None
+            return None, [], (self.next_read_tick - 1)
 
 
 
@@ -160,9 +203,13 @@ class SignalGroup():
 
 
 
-    @property
-    def signal_names(self):
-        return [name for name in self.signals]
+    def __getattr__(self, attr):
+        if attr in self.signals:
+            return self.signals[attr]
+        else:
+            raise AttributeError('There is no attribute or signal called ' + attr)
+
+
 
     def __iter__(self):
         return self
@@ -171,6 +218,7 @@ class SignalGroup():
 
     def __next__(self):
         if self.iter_index >= len(self.signal_names):
+            self.iter_index = 0
             raise StopIteration
         else:
             signal = self.signals[self.signal_names[self.iter_index]]
@@ -179,11 +227,33 @@ class SignalGroup():
 
 
 
-    def end(self, values=None):
+    @property
+    def signal_names(self):
+        return [name for name in self.signals]
+
+
+
+    @property
+    def max_len(self):
+        return max([self.signals[signal].len for signal in self.signals])
+
+
+
+    def append(self, signals):
+        if not isinstance(signals, dict):
+            raise ValueError('Append signal to group requires a dict like {\'name\': Signal}')
+        for signal in signals:
+            self.signals[signal] = signals[signal]
+
+
+
+    def end(self, params=None):
         for signal in self.signals:
-            close_value = values[signal] if (values and (signal in values)) else {}
-            self.signals[signal].end(**close_value)
-        return values
+            if isinstance(params, dict):
+                end_tick = params[signal] if (params and (signal in params)) else None
+            else:
+                end_tick = params
+            self.signals[signal].end(end_tick)
 
 
 

@@ -10,7 +10,8 @@ from   math                           import ceil
 from   ghdl_tools.utils               import (run_console_command,
                                               get_dirs_containing_files,
                                               save_txt, get_filepaths_recursive,
-                                              gtkwave_open_wave)
+                                              gtkwave_open_wave, generate_vhdl_package,
+                                              signals_to_pkg_cfg)
 from   ghdl_tools.regular_expressions import re_vend_srcs
 from   ghdl_tools.parse               import (parse, parse_included)
 
@@ -253,6 +254,16 @@ class GHDL():
 
 
 
+    def __repr__(self):
+        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
+
+
+
+    def __str__(self):
+        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
+
+
+
     @property
     def install_path(self):
         if not self.config['install_path']:
@@ -274,16 +285,6 @@ class GHDL():
     def sources_directories(self, val):
         self._sources_directories = self._sources_directories.update(val) if self._sources_directories else set(val)
         self.add_sources_from_dir(val, exclude_files=self.exclude_files)
-
-
-
-    def __repr__(self):
-        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
-
-
-
-    def __str__(self):
-        return 'GHDL configuration (VHDL ' + str(self.vhdl_standard) + ')'
 
 
 
@@ -321,6 +322,16 @@ class GHDL():
             mkdir(self.work_dir_path)
             with open(join(self.work_dir_path, 'config'), 'w') as outfile:
                 dump(self.config, outfile)
+
+
+
+    def signals_to_package(self, signals, name):
+        self.generate_vhdl_package(signals_to_pkg_cfg(signals), name)
+
+
+
+    def generate_vhdl_package(self, pkg_cfg, package_name):
+        generate_vhdl_package(pkg_cfg, package_name, self.work_dir_path)
 
 
 
