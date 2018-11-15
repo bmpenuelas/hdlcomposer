@@ -24,7 +24,7 @@ from   ghdl_tools.parse               import (parse, parse_included)
 
 def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_path,
                    vhdl_standard='93c', recompile=False, verbose=False):
-    """ Compile vendor libraries
+    """Compile vendor libraries
 
     For a list of supported libraries check your GHDL version.
     This should be run once in the system, the compiled result can be reused by
@@ -75,7 +75,7 @@ def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_p
 
 
 def import_file(file_path, workdir, vhdl_standard='93c'):
-    """ Import and get the entity and architectures present in the file
+    """Import and get the entity and architectures present in the file
     """
 
     file_path = normpath(file_path)
@@ -94,7 +94,7 @@ def import_file(file_path, workdir, vhdl_standard='93c'):
 
 
 def make_entity(entity_name, workdir, additional_libs, vhdl_standard='93c'):
-    """ Compile the imported files
+    """Compile the imported files
 
     Requires previous import_file.
     """
@@ -112,7 +112,7 @@ def make_entity(entity_name, workdir, additional_libs, vhdl_standard='93c'):
 
 
 def dump_xml_file(file_path, workdir, additional_libs, output_file_path):
-    """ Generate a (large) XML representation of the VHDL code
+    """Generate a (large) XML representation of the VHDL code
     """
 
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
@@ -129,7 +129,7 @@ def dump_xml_file(file_path, workdir, additional_libs, output_file_path):
 
 
 def generate_cross_references_html(file_path, workdir, additional_libs, output_path=''):
-    """ Generate a navigable HTML tree of the provided files
+    """Generate a navigable HTML tree of the provided files
 
     Requires previous make_entity.
     """
@@ -151,7 +151,7 @@ def generate_cross_references_html(file_path, workdir, additional_libs, output_p
 
 
 def analyze_file(file_path, workdir, additional_libs):
-    """ Analyze source file (-a)
+    """Analyze source file (-a)
     """
 
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
@@ -165,7 +165,7 @@ def analyze_file(file_path, workdir, additional_libs):
 
 
 def elaborate_entity(entity_name, workdir):
-    """ Elaborate source file (-e)
+    """Elaborate source file (-e)
     """
 
     elaborate_command = \
@@ -177,7 +177,7 @@ def elaborate_entity(entity_name, workdir):
 
 
 def run_tb(testbench_name, workdir, run_time='1us'):
-    """ Run the desired testbench (-r)
+    """Run the desired testbench (-r)
 
     Provide the entity name in the testbench, not the file name.
     Requires previous (-a, -e) or (-i, -m).
@@ -195,7 +195,7 @@ def run_tb(testbench_name, workdir, run_time='1us'):
 
 
 class SetExt(set):
-    """ Extend the class set
+    """Extend the class set
     """
 
     def __init__(self, *args, **kwargs):
@@ -211,13 +211,13 @@ class SetExt(set):
 ###############################################################################
 
 class GHDL():
-    """ GHDL abstraction
+    """GHDL abstraction
 
-        Contains the methods, configuration and paths needed to run GHDL and
-        the tools provided by this package. When automating a simulation, using
-        these class methods produce the same results but require even fewer
-        arguments than using the standalone functions because references and
-        results are stored and reused.
+    Contains the methods, configuration and paths needed to run GHDL and
+    the tools provided by this package. When automating a simulation, using
+    these class methods produce the same results but require even fewer
+    arguments than using the standalone functions because references and
+    results are stored and reused.
     """
 
     def __init__(self, verbose=False, install_path=None, vhdl_standard=None,
@@ -247,7 +247,7 @@ class GHDL():
         self.always_reimport = always_reimport
         self.exclude_files = exclude_files or []
         self.sources_paths = SetExt(sources_paths) if sources_paths else SetExt()
-        self._sources_directories = set()
+        self._sources_directories = SetExt()
         self.sources_directories = sources_directories or [getcwd()]
         self.testbench = testbench if isinstance(testbench, list) else ([testbench] if testbench else [])
         self.waves_dir = normpath(waves_dir) if waves_dir else None
@@ -283,13 +283,13 @@ class GHDL():
 
     @sources_directories.setter
     def sources_directories(self, val):
-        self._sources_directories = self._sources_directories.update(val) if self._sources_directories else set(val)
-        self.add_sources_from_dir(val, exclude_files=self.exclude_files)
+        self._sources_directories = self._sources_directories.update(val) if self._sources_directories else SetExt(val)
+        self.add_sources_from_dir(val)
 
 
 
     def load_config_from_file(self):
-        """ Load persistent configuration
+        """Load persistent configuration
 
         For example, the GHDL install path, so that it only has to be input
         once per project.
@@ -303,13 +303,14 @@ class GHDL():
                 'install_path': '',
                 'imported_entities': {},
                 'imported_packages': {},
+                'imported_files': {},
             }
             self.save_config_to_file()
 
 
 
     def save_config_to_file(self):
-        """ Save persistent configuration
+        """Save persistent configuration
 
         For example, the GHDL install path, so that it only has to be input
         once per project.
@@ -325,18 +326,24 @@ class GHDL():
 
 
 
-    def signals_to_package(self, signals, name):
-        self.generate_vhdl_package(signals_to_pkg_cfg(signals), name)
+    def signals_to_package(self, signals, package_name, output_dir=None):
+        """Generate a VHDL package from a group of signals
+        """
+
+        self.generate_vhdl_package(signals_to_pkg_cfg(signals), package_name, output_dir)
 
 
 
-    def generate_vhdl_package(self, pkg_cfg, package_name):
-        generate_vhdl_package(pkg_cfg, package_name, self.work_dir_path)
+    def generate_vhdl_package(self, pkg_cfg, package_name, output_dir=None):
+        """generate_vhdl_package wrapper
+        """
+
+        generate_vhdl_package(pkg_cfg, package_name, output_dir)
 
 
 
     def add_compiled_libs(self, directory_paths):
-        """ Find the paths that contain compiled libs and add them to compiled_libs_paths
+        """Find the paths that contain compiled libs and add them to compiled_libs_paths
         """
 
         if not isinstance(directory_paths, list):
@@ -347,7 +354,7 @@ class GHDL():
 
 
     def compile_vendor(self, vendor_name, vendor_install_path, output_path='./compiled/vendor', recompile=False):
-        """ compile_vendor wrapper
+        """compile_vendor wrapper
         """
 
         output_path = join(normpath(output_path), vendor_name)
@@ -372,28 +379,31 @@ class GHDL():
 
 
     def add_sources_from_dir(self, sources_directories, extensions=['.vhd', '.vhdl'],
-                             include_files=[], exclude_files=[]):
-        """ Scan a directory for sources
+                             include_files=[]):
+        """Scan a directory for sources
 
         Args:
-            sources_directories: Specify which paths to scan
+            sources_directories: One or several paths to scan
             extensions: File extensions that should be included
             include_files: File name list, if provided only these files will be
                 used. The path is automatically found.
-            exclude_files: File names in this list will not be used.
         """
 
         vhd_paths = set()
         for src_folder in sources_directories:
-            vhd_paths.update( get_filepaths_recursive(src_folder, extensions, include_files, exclude_files) )
-        if self.verbose:
-            stdout.write('Found ' + str(len(vhd_paths)) + ' VHDL files\n')
+            vhd_paths.update( [abspath(file_path) for file_path in
+                               get_filepaths_recursive(src_folder, extensions, include_files, self.exclude_files)] )
+        new_sources = SetExt(vhd_paths - self.sources_paths)
         self.sources_paths.update(vhd_paths)
+        if self.verbose:
+            stdout.write('Found ' + str(len(vhd_paths)) + ' VHDL files ' +
+                         ('(' + str(len(new_sources)) + ' new)' if new_sources else '') + '\n')
+        return new_sources
 
 
 
     def import_file(self, file_path):
-        """ Import file and save the results
+        """Import file and save the results
         """
 
         error, terminal_output, import_command, units_description = import_file(file_path, self.work_dir_path, self.vhdl_standard)
@@ -401,16 +411,19 @@ class GHDL():
             for unit_description in units_description:
                 if unit_description[0] == 'entity':
                     self.config['imported_entities'][unit_description[1]] = file_path
-                    self.save_config_to_file()
                 elif unit_description[0] == 'package':
                     self.config['imported_packages'][unit_description[1]] = file_path
-                    self.save_config_to_file()
+                if file_path in self.config['imported_files']:
+                    self.config['imported_files'][file_path].append(unit_description[1])
+                else:
+                    self.config['imported_files'][file_path] = [unit_description[1]]
+                self.save_config_to_file()
         return error, terminal_output, import_command, units_description
 
 
 
     def make_entity(self, entity):
-        """ make_entity wrapper
+        """make_entity wrapper
         """
 
         return make_entity(entity, self.work_dir_path, self.compiled_libs_paths, self.vhdl_standard)
@@ -418,7 +431,7 @@ class GHDL():
 
 
     def dump_xml_file(self, file_path, output_file_path):
-        """ dump_xml_file wrapper
+        """dump_xml_file wrapper
         """
 
         return dump_xml_file(file_path, self.work_dir_path, self.compiled_libs_paths, output_file_path)
@@ -496,7 +509,6 @@ class GHDL():
                 has_to_import = False
                 if self.verbose:
                     stdout.write('Not reimporting sources\n')
-                return
             else:
                 # Cleanup work dir
                 rmtree(self.work_dir_path)
@@ -504,11 +516,16 @@ class GHDL():
         else:
             mkdir(self.work_dir_path)
 
-        if self.verbose:
-            stdout.write('Importing included sources...\n')
+        new_sources = self.add_sources_from_dir(self.sources_directories)
+        if has_to_import:
+            sources_to_import = self.sources_paths
+        else:
+            sources_to_import = list(new_sources)
+            if self.verbose and sources_to_import:
+                stdout.write('Importing ' + str(len(new_sources)) + ' new files...\n')
         imported = 0
         previous_len = 0
-        for file_path in self.sources_paths:
+        for file_path in sources_to_import:
             import_error, terminal_output, import_command, units_description = self.import_file(file_path)
 
             if import_error:
@@ -528,7 +545,7 @@ class GHDL():
                     previous_len = current_len
             if self.verbose:
                 stdout.flush()
-        if self.verbose:
+        if self.verbose and sources_to_import:
             stdout.write('\n')
 
 

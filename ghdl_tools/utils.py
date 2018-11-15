@@ -2,8 +2,6 @@ from os                    import (listdir, walk, getcwd)
 from os.path               import (normpath, abspath, join, isdir)
 from subprocess            import (check_output, Popen, DEVNULL, STDOUT, check_call, CalledProcessError)
 
-from ghdl_tools.vhdl_units import (SignalGroup)
-
 
 
 ###############################################################################
@@ -11,7 +9,7 @@ from ghdl_tools.vhdl_units import (SignalGroup)
 ###############################################################################
 
 def save_txt(text, path):
-    """ Save text string as file
+    """Save text string as file
     """
 
     with open(path, "w+") as f:
@@ -20,8 +18,9 @@ def save_txt(text, path):
 
 
 def get_bit(y, x):
-    """ Get single bit at index
+    """Get single bit at index
     """
+
     return str((x>>y)&1)
 
 
@@ -29,14 +28,39 @@ def get_bit(y, x):
 def int_tobin(x, count=8):
     """ Integer to binary string
     """
+
     shift = range(count-1, -1, -1)
     bits = map(lambda y: get_bit(y, x), shift)
     return "".join(bits)
 
 
 
+def bin_str_to(bin_str, signal_type):
+    """Binary string to boolean or integer
+
+    Conversion depends on the signal type.
+    """
+
+    if bin_str == None:
+        return None
+
+    if signal_type in ('boolean', 'std_logic',):
+        return (False if (bin_str.lower() in ('0', 'false')) else True)
+    elif signal_type in ('integer', 'unsigned', 'std_logic_vector'):
+        return int(bin_str, 2)
+    elif signal_type == 'signed':
+        if bin_str[0] == '0':
+            return bin_str_to(bin_str[1:], 'integer')
+        else:
+            return -1 * (~((bin_str_to(bin_str[1:], 'integer') - 1)) & (2**(len(bin_str) - 1) - 1))
+    else:
+        raise ValueError('Conversion to ' +  signal_type + 'is not available. Supported types: \
+                          boolean, std_logic, std_logic_vector, integer, signed, unsigned')
+
+
+
 def generate_vhdl_package(pkg_cfg, package_name, output_directory=None, indentation=2):
-    """ Generate a VHDL package with the provided constants
+    """Generate a VHDL package with the provided constants
 
     Data can be provided as integer or as a binary representation string, or even
     a mix of the two.
@@ -209,6 +233,7 @@ def signals_to_pkg_cfg(signals):
                  a SignalGroup instance.
     """
 
+    from ghdl_tools.signals import (SignalGroup)
     if isinstance(signals, SignalGroup):
         signals = signals.signals
 
@@ -250,7 +275,7 @@ def run_console_command(command):
 
 
 def get_dirs_inside(dir_path):
-    """ Get a list of all the subdirectories inside a given directory
+    """Get a list of all the subdirectories inside a given directory
     """
 
     scan_folder = normpath(dir_path)
@@ -260,7 +285,7 @@ def get_dirs_inside(dir_path):
 
 
 def get_filepaths_recursive(dir_path, extensions=[], include_files=[], exclude_files=[]):
-    """ Get a list of all the files inside a given directory
+    """Get a list of all the files inside a given directory
 
     This function is recursive, it will scan all directories inside
     every subdirectory recursively.
@@ -285,7 +310,7 @@ def get_filepaths_recursive(dir_path, extensions=[], include_files=[], exclude_f
 
 
 def get_dirs_containing_files(dir_path, extension=None):
-    """ Get a list of all the directories that contain a file with the given extension
+    """Get a list of all the directories that contain a file with the given extension
 
     Extension is optional (to find non-empty directories). This function is recursive,
     it will scan all directories inside every subdirectory recursively.
@@ -302,7 +327,7 @@ def get_dirs_containing_files(dir_path, extension=None):
 
 
 def gtkwave_open_wave(ghw_path, gtkw_file=''):
-    """ Open a ghw file in GTKWave
+    """Open a ghw file in GTKWave
 
     Optionally, you can provide a gtkw file too.
     """
