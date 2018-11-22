@@ -29,7 +29,7 @@ def int_tobin(x, count=8):
     """ Integer to binary string
     """
 
-    shift = range(count-1, -1, -1)
+    shift = range(count - 1, -1, -1)
     bits = map(lambda y: get_bit(y, x), shift)
     return "".join(bits)
 
@@ -62,7 +62,7 @@ def bin_str_to(bin_str, signal_type):
 def generate_vhdl_package(pkg_cfg, package_name, output_directory=None, indentation=2):
     """Generate a VHDL package with the provided constants
 
-    Data can be provided as integer or as a binary representation string, or even
+    Data can be provided as integer, as a binary representation string, or even as
     a mix of the two.
     Width will be extended according to the type.
 
@@ -221,7 +221,7 @@ def vd_files(signal_name, directory_path):
     """Return a pair of typical file paths for a VHDL signal dump
     """
 
-    return [join(directory_path, signal_name + '_v.out'), join(directory_path, signal_name + '_d.out')]
+    return [join(directory_path, signal_name + '_t.out'), join(directory_path, signal_name + '_v.out')]
 
 
 
@@ -233,20 +233,20 @@ def signals_to_pkg_cfg(signals):
                  a SignalGroup instance.
     """
 
-    from ghdl_tools.signals import (SignalGroup)
+    from ghdl_tools.signals import (Signal, SignalGroup)
     if isinstance(signals, SignalGroup):
         signals = signals.signals
 
     pkg_cfg = {}
     for signal_name in signals.keys():
+        pkg_cfg[signal_name.upper() + '_T'] = {
+            'data': [data[Signal.t] for data in signals[signal_name].waveform],
+            'type': 'integer',
+        }
         pkg_cfg[signal_name.upper() + '_V'] = {
-            'data': [data[0] for data in signals[signal_name].waveform],
+            'data': [data[Signal.v] for data in signals[signal_name].waveform],
             'type': signals[signal_name].type,
             'width': signals[signal_name].width,
-        }
-        pkg_cfg[signal_name.upper() + '_D'] = {
-            'data': [data[1] for data in signals[signal_name].waveform],
-            'type': 'integer',
         }
     return pkg_cfg
 
