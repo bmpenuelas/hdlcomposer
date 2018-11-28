@@ -35,6 +35,22 @@ class Tick():
 
 
 
+class Constant():
+    """Constant value
+    """
+
+    def __init__(self, value, constant_type=None, constant_width=None):
+        self.value = value
+        self.type = constant_type
+        self.width = constant_width
+
+
+
+    def __repr__(self):
+        return 'Constant - value: ' + str(self.value)
+
+
+
 class Signal():
     """Represent a signal and encode it in Time-Value format
 
@@ -54,7 +70,7 @@ class Signal():
     t = 0
     v = 1
 
-    def __init__(self, initial_value, clock=None, signal_type=None, signal_width=None,
+    def __init__(self, initial_value, signal_type=None, signal_width=None, clock=None,
                  init_files=False):
         self.clock = clock
         self.type = signal_type
@@ -106,14 +122,17 @@ class Signal():
         return self.waveform[-1][self.v]
 
 
+
     @property
     def val(self):
         return self.last_value
 
 
+
     @property
     def last_t(self):
         return self.waveform[-1][self.t]
+
 
 
     def get_value(self, at_tick=None, return_transition=False):
@@ -197,52 +216,43 @@ class Signal():
 
 
 
-class SignalGroup():
-    """Group several signals to apply actions to all at once
+class Group():
+    """Group several signals and or constants to apply actions to all at once
 
     Args:
-        signals (dict): {'signal_name_a': Signal(a), 'signal_name_b': Signal(b), ...}
+        elements (dict): {'signal_name_a': Signal(a), 'constant_a': Constant(a), ...}
     """
 
-    def __init__(self, signals):
-        self.signals = signals
+    def __init__(self, elements):
+        self.signals = {}
+        self.constants = {}
+        self.elements = elements
 
         self.iter_index = 0
 
 
 
-    def __repr__(self):
-        return 'Signal Group - ' + ' '.join([name for name in self.signals])
+    @property
+    def elements(self):
+        return {**self.constants, **self.signals}
 
 
 
-    def __getattr__(self, attr):
-        if attr in self.signals:
-            return self.signals[attr]
-        else:
-            raise AttributeError('There is no attribute or signal called ' + attr)
-
-
-
-    def __iter__(self):
-        return self
-
-
-
-    def __next__(self):
-        if self.iter_index >= len(self.signal_names):
-            self.iter_index = 0
-            raise StopIteration
-        else:
-            signal = self.signals[self.signal_names[self.iter_index]]
-            self.iter_index += 1
-            return signal
+    @elements.setter
+    def elements(self, new):
+        for name in new:
+            if isinstance(new[name], Signal):
+                self.signals[name] = new[name]
+            elif isinstance(new[name], Constant):
+                self.constants[name] = new[name]
+            else:
+                raise TypeError('Provide a dictionary containing Signal and/or Constant objects')
 
 
 
     @property
-    def signal_names(self):
-        return [name for name in self.signals]
+    def element_names(self):
+        return [name for name in self.elements]
 
 
 
@@ -252,11 +262,40 @@ class SignalGroup():
 
 
 
-    def append(self, signals):
-        if not isinstance(signals, dict):
-            raise ValueError('Append signal to group requires a dict like {\'name\': Signal,}')
-        for signal in signals:
-            self.signals[signal] = signals[signal]
+    def __repr__(self):
+        return 'Group - ' + ' '.join([name for name in self.elements])
+
+
+
+    def __getattr__(self, attr):
+        if attr in self.elements:
+            return self.elements[attr]
+        else:
+            raise AttributeError('There is no attribute or element called ' + attr)
+
+
+
+    def __iter__(self):
+        return self
+
+
+
+    def __next__(self):
+        if self.iter_index >= len(self.element_names):
+            self.iter_index = 0
+            raise StopIteration
+        else:
+            element = self.elements[self.element_names[self.iter_index]]
+            self.iter_index += 1
+            return element
+
+
+
+    def append(self, elements):
+        if not isinstance(elements, dict):
+            raise ValueError('Append to group requires a dict like {\'name\': new_element,}')
+        for element in elements:
+            self.elements[element] = elements[element]
 
 
 

@@ -225,30 +225,50 @@ def vd_files(signal_name, directory_path):
 
 
 
-def signals_to_pkg_cfg(signals):
-    """Generate the config structure to generate a VHDL package from a group of signals
+def data_to_pkg_cfg(data):
+    """Generate the config structure needed to generate a VHDL package from a Group
 
     Args:
-        signals: A dictionary like {'signal_name_a': Signal(a), 'signal_name_b': Signal(b), ...} or
-                 a SignalGroup instance.
+        data: A dictionary like {'signal_name_a': Signal(a), 'constant_a': Constant(b), ...} or
+              a Group instance.
     """
 
-    from ghdl_tools.signals import (Signal, SignalGroup)
-    if isinstance(signals, SignalGroup):
-        signals = signals.signals
+    from ghdl_tools.signals import (Group, Signal, Constant)
+    if isinstance(data, Group):
+        elements = data.elements
+    else:
+        if not all([type(obj) in (Signal, Constant) for obj in data.values()]):
+            raise TypeError('Provide a Group or dictionary containing Signal and/or Constant objects')
+        else:
+            elements = data
 
     pkg_cfg = {}
-    for signal_name in signals.keys():
-        pkg_cfg[signal_name.upper() + '_T'] = {
-            'data': [data[Signal.t] for data in signals[signal_name].waveform],
-            'type': 'integer',
-        }
-        pkg_cfg[signal_name.upper() + '_V'] = {
-            'data': [data[Signal.v] for data in signals[signal_name].waveform],
-            'type': signals[signal_name].type,
-            'width': signals[signal_name].width,
-        }
+    for element_name in elements.keys():
+        if isinstance(elements[element_name], Signal):
+            pkg_cfg[element_name.upper() + '_T'] = {
+                'data': [data[Signal.t] for data in elements[element_name].waveform],
+                'type': 'integer',
+            }
+            pkg_cfg[element_name.upper() + '_V'] = {
+                'data': [data[Signal.v] for data in elements[element_name].waveform],
+                'type': elements[element_name].type,
+                'width': elements[element_name].width,
+            }
+        elif isinstance(elements[element_name], Constant):
+            pkg_cfg[element_name.upper()] = {
+                'data': elements[element_name].value,
+                'type': elements[element_name].type,
+                'width': elements[element_name].width,
+            }
     return pkg_cfg
+
+
+
+def data_to_package(signals, package_name, output_dir=None):
+        """Generate a VHDL package from a group of signals
+        """
+
+        generate_vhdl_package(data_to_pkg_cfg(signals), package_name, output_dir)
 
 
 

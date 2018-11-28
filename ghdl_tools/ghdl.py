@@ -10,8 +10,7 @@ from   math                           import ceil
 from   ghdl_tools.utils               import (run_console_command,
                                               get_dirs_containing_files,
                                               save_txt, get_filepaths_recursive,
-                                              gtkwave_open_wave, generate_vhdl_package,
-                                              signals_to_pkg_cfg)
+                                              gtkwave_open_wave, data_to_package)
 from   ghdl_tools.regular_expressions import re_vend_srcs
 from   ghdl_tools.parse               import (parse, parse_included)
 
@@ -19,7 +18,7 @@ from   ghdl_tools.parse               import (parse, parse_included)
 
 
 ###############################################################################
-# GHDL COMMAND WRAPPERS
+# GHDL COMMANDS
 ###############################################################################
 
 def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_path,
@@ -80,12 +79,16 @@ def import_file(file_path, workdir, vhdl_standard='93c'):
 
     file_path = normpath(file_path)
     workdir = normpath(workdir)
-    import_command = \
-        'ghdl -i -v --ieee=synopsys -fexplicit' + \
-        ((' --std=' + str(vhdl_standard)) if vhdl_standard else '') + \
-        ' --workdir="' + workdir + '"' + \
-        ' "' + file_path + '"'
+    parameters = {
+        'ghdl': 'ghdl -i -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'standard': (' --std=' + str(vhdl_standard)) if vhdl_standard else '',
+        'work': '--workdir="' + workdir + '"',
+        'file': '"' + file_path + '"',
+    }
+    import_command = ' '.join(parameters.values())
     command_run_result = run_console_command(import_command)
+
     error = command_run_result[0]
     terminal_output = command_run_result[1]
     units_description = parse_included(terminal_output)
@@ -101,12 +104,15 @@ def make_entity(entity_name, workdir, additional_libs, vhdl_standard='93c'):
 
     workdir = normpath(workdir)
     additional_libs = ' -P' + ' -P'.join(additional_libs) if additional_libs else ''
-    make_command = \
-        'ghdl -m -v --ieee=synopsys -fexplicit' + \
-        ((' --std=' + str(vhdl_standard)) if vhdl_standard else '') + \
-        ' --workdir="' + workdir + '"' + \
-        additional_libs + \
-        ' ' + entity_name
+    parameters = {
+        'ghdl': 'ghdl -m -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'standard': (' --std=' + str(vhdl_standard)) if vhdl_standard else '',
+        'work': '--workdir="' + workdir + '"',
+        'libs': additional_libs,
+        'entity': entity_name,
+    }
+    make_command = ' '.join(parameters.values())
     return run_console_command(make_command) + (make_command,)
 
 
@@ -117,10 +123,13 @@ def dump_xml_file(file_path, workdir, additional_libs, output_file_path):
 
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
     output_file_path = abspath(output_file_path)
-    dump_xml_command = \
-        'ghdl --file-to-xml -v --ieee=synopsys -fexplicit' + \
-        ' --workdir="' + workdir + '"' + \
-        ' "' + file_path + '"'
+    parameters = {
+        'ghdl': 'ghdl --file-to-xml -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'work': '--workdir="' + workdir + '"',
+        'file': '"' + file_path + '"',
+    }
+    dump_xml_command = ' '.join(parameters.values())
     error, xml = run_console_command(dump_xml_command)
     if not error:
         save_txt(xml, output_file_path)
@@ -135,17 +144,18 @@ def generate_cross_references_html(file_path, workdir, additional_libs, output_p
     """
 
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
-    if output_path:
-        output_path = abspath(output_path)
-        if not exists(output_path):
-            mkdir(output_path)
-
-    gen_cross_refs_command = \
-        'ghdl --xref-html -v --ieee=synopsys -fexplicit' + \
-        ' --workdir="' + workdir + '"' + \
-        ' --format=css' + \
-        (' -o ' + ('"' + output_path + '"') if output_path else '') + \
-        ' "' + file_path + '"'
+    output_path = abspath(output_path) if output_path else ''
+    if not exists(output_path):
+        mkdir(output_path)
+    parameters = {
+        'ghdl': 'ghdl --xref-html -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'work': '--workdir="' + workdir + '"',
+        'format': '--format=css',
+        'o': '-o ' + ('"' + output_path + '"') if output_path else '',
+        'file': '"' + file_path + '"',
+    }
+    gen_cross_refs_command = ' '.join(parameters.values())
     return run_console_command(gen_cross_refs_command)
 
 
@@ -155,11 +165,14 @@ def analyze_file(file_path, workdir, additional_libs):
     """
 
     additional_libs = ' -P ' + ' -P '.join(additional_libs) if additional_libs else ''
-    analyze_command = \
-        'ghdl -a -v --ieee=synopsys -fexplicit' + \
-        ' --workdir="' + workdir + '"' + \
-        additional_libs + \
-        ' "' + file_path + '"'
+    parameters = {
+        'ghdl': 'ghdl -a -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'work': '--workdir="' + workdir + '"',
+        'libs': additional_libs,
+        'file': '"' + file_path + '"',
+    }
+    analyze_command = ' '.join(parameters.values())
     return run_console_command(analyze_command)
 
 
@@ -168,15 +181,18 @@ def elaborate_entity(entity_name, workdir):
     """Elaborate source file (-e)
     """
 
-    elaborate_command = \
-        'ghdl -e -v --ieee=synopsys -fexplicit' + \
-        ' --workdir="' + workdir + '"' + \
-        ' ' + entity_name
+    parameters = {
+        'ghdl': 'ghdl -e -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'work': '--workdir="' + workdir + '"',
+        'entity': entity_name,
+    }
+    elaborate_command = ' '.join(parameters.values())
     return run_console_command(elaborate_command)
 
 
 
-def run_tb(testbench_name, workdir, run_time='1us'):
+def run_tb(testbench_name, workdir, run_time='1us', generate_waveform=True):
     """Run the desired testbench (-r)
 
     Provide the entity name in the testbench, not the file name.
@@ -184,12 +200,19 @@ def run_tb(testbench_name, workdir, run_time='1us'):
     """
 
     workdir = normpath(workdir)
-    run_command = \
-        'ghdl -r -v --ieee=synopsys -fexplicit' + \
-        ' --workdir="' + workdir + '" ' + \
-        testbench_name + \
-        ' --wave="' + join(workdir, (testbench_name + '.ghw')) + '"' + \
-        (' --stop-time=' + run_time if (run_time and not run_time == '0') else ' --no-run --disp-tree=inst')
+    parameters = {
+        'ghdl': 'ghdl -r -v',
+        'synopsys': '--ieee=synopsys -fexplicit',
+        'work': '--workdir="' + workdir + '"',
+        'testbench': testbench_name,
+        'wave': ('--wave="' + join(workdir, (testbench_name + '.ghw')) + '"') \
+                if generate_waveform \
+                else '',
+        'time': ('--stop-time=' + run_time) \
+                if (run_time and not run_time == '0') \
+                else '--no-run --disp-tree=inst',
+    }
+    run_command = ' '.join(parameters.values())
     return run_console_command(run_command)
 
 
@@ -326,19 +349,13 @@ class GHDL():
 
 
 
-    def signals_to_package(self, signals, package_name, output_dir=None):
-        """Generate a VHDL package from a group of signals
+    def generate_and_run(self, simulation_data, sim_pkgs_directory, run_time=None,
+                         package_name='HDLComposerDataPkg', open_waves=True):
+        """Short for data_to_package(), then run()
         """
 
-        self.generate_vhdl_package(signals_to_pkg_cfg(signals), package_name, output_dir)
-
-
-
-    def generate_vhdl_package(self, pkg_cfg, package_name, output_dir=None):
-        """generate_vhdl_package wrapper
-        """
-
-        generate_vhdl_package(pkg_cfg, package_name, output_dir)
+        data_to_package(simulation_data, package_name, sim_pkgs_directory)
+        self.run(run_time, open_waves)
 
 
 
@@ -349,12 +366,14 @@ class GHDL():
         if not isinstance(directory_paths, list):
             directory_paths = [directory_paths]
         for directory_path in directory_paths:
-            self.compiled_libs_paths.update([abspath(directory) for directory in get_dirs_containing_files(directory_path, extension='.cf')])
+            self.compiled_libs_paths.update([abspath(directory) \
+             for directory in get_dirs_containing_files(directory_path, extension='.cf')])
 
 
 
-    def compile_vendor(self, vendor_name, vendor_install_path, output_path='./compiled/vendor', recompile=False):
-        """compile_vendor wrapper
+    def compile_vendor(self, vendor_name, vendor_install_path, output_path='./compiled/vendor',
+                       recompile=False):
+        """compile_vendor() wrapper
         """
 
         output_path = join(normpath(output_path), vendor_name)
@@ -406,9 +425,9 @@ class GHDL():
         """Import file and save the results
         """
 
-        error, terminal_output, import_command, units_description = import_file(file_path, self.work_dir_path, self.vhdl_standard)
+        error, terminal_out, command, description = import_file(file_path, self.work_dir_path, self.vhdl_standard)
         if not error:
-            for unit_description in units_description:
+            for unit_description in description:
                 if unit_description[0] == 'entity':
                     self.config['imported_entities'][unit_description[1]] = file_path
                 elif unit_description[0] == 'package':
@@ -418,12 +437,12 @@ class GHDL():
                 else:
                     self.config['imported_files'][file_path] = [unit_description[1]]
                 self.save_config_to_file()
-        return error, terminal_output, import_command, units_description
+        return error, terminal_out, command, description
 
 
 
     def make_entity(self, entity):
-        """make_entity wrapper
+        """make_entity() wrapper
         """
 
         return make_entity(entity, self.work_dir_path, self.compiled_libs_paths, self.vhdl_standard)
@@ -431,7 +450,7 @@ class GHDL():
 
 
     def dump_xml_file(self, file_path, output_file_path):
-        """dump_xml_file wrapper
+        """dump_xml_file() wrapper
         """
 
         return dump_xml_file(file_path, self.work_dir_path, self.compiled_libs_paths, output_file_path)
@@ -439,18 +458,18 @@ class GHDL():
 
 
     def generate_cross_references_html(self, file_path, output_path=''):
-        """ generate_cross_references_html wrapper
+        """ generate_cross_references_html() wrapper
         """
 
         return generate_cross_references_html(file_path, self.work_dir_path, self.compiled_libs_paths, output_path)
 
 
 
-    def run_tb(self, entity, run_time):
-        """ run_tb wrapper
+    def run_tb(self, entity, run_time, generate_waveform=True):
+        """ run_tb() wrapper
         """
 
-        return run_tb(entity, self.work_dir_path, run_time)
+        return run_tb(entity, self.work_dir_path, run_time, generate_waveform)
 
 
 
@@ -458,7 +477,7 @@ class GHDL():
         """ Parse an entity architecture
         """
 
-        error, terminal_output = run_tb(entity, self.work_dir_path, 0)
+        error, terminal_output = run_tb(entity, self.work_dir_path, 0, False)
         return parse(terminal_output)
 
 
@@ -567,30 +586,26 @@ class GHDL():
 
 
 
-    def run(self, run_time=None, open_waves=True):
+    def run(self, run_time='1us', open_waves=True):
         """ Makes, runs and opens the waveforms for the configured testbenches
 
         Requires previous import self.import_sources or equivalent.
         """
 
-        run_time = run_time or '1us'
-
-        if self.verbose:
-            if self.testbench:
+        # Import
+        if self.testbench:
+            self.import_sources()
+            if self.verbose:
                 stdout.write(
                     ' '.join([
-                        'Running testbench' + ('es' if (len(self.testbench) > 1) else ''),
+                        'Run testbench' + ('es' if (len(self.testbench) > 1) else ''),
                         ' '.join([entity for entity in self.testbench]),
                         '\n'
                     ])
                 )
-            else:
+        else:
+            if self.verbose:
                 stdout.write('No testbench selected\n')
-
-
-        # Import
-        if self.testbench:
-            self.import_sources()
 
         # Make
         for entity in self.testbench:
@@ -603,7 +618,7 @@ class GHDL():
                 if self.verbose:
                     stdout.write('Running testbench ' + entity + ' ' + (run_time or '') + '...\n')
 
-                error_occurred, run_terminal_output = self.run_tb(entity, run_time)
+                error_occurred, run_terminal_output = self.run_tb(entity, run_time, open_waves)
 
                 if error_occurred:
                     stdout.write('ERROR Running testbench ' + entity + '\n')
