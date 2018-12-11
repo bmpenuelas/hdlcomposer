@@ -268,6 +268,24 @@ def data_to_pkg_cfg(data):
 
 
 
+def vcd_get_signal_names(vcd_path):
+    """Load a vcd file and return the list of signal names including path
+    """
+
+    vcd = VCDVCD(vcd_path)
+    return vcd.get_signals()
+
+
+
+def vcd_get_data(vcd_path):
+    """Load a vcd file and return the list of signal names including path
+    """
+
+    vcd = VCDVCD(vcd_path)
+    return vcd.get_data()
+
+
+
 def vcd_to_signals(vcd_path, signals='', module_path=''):
     """Load a vcd file times and values into Signals
 
@@ -322,12 +340,11 @@ def vcd_to_signals(vcd_path, signals='', module_path=''):
                 )
                 if matches:
                     module_path.pop(signal_name)
+                    result_signals[found_signal_name] = Signal(signal_type=data[identifier]['var_type'],
+                                                               signal_width=data[identifier]['size'],
+                                                               signal_path=vcd_signal_name)
+                    result_signals[found_signal_name].waveform = [list(tv) for tv in data[identifier]['tv']]
                     break
-
-
-            result_signals[found_signal_name] = Signal(signal_type=data[identifier]['var_type'],
-                                                       signal_width=data[identifier]['size'])
-            result_signals[found_signal_name].waveform = [list(tv) for tv in data[identifier]['tv']]
 
     return result_signals
 

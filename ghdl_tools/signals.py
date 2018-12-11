@@ -72,13 +72,14 @@ class Signal():
     v = 1
 
     def __init__(self, initial_value=None, signal_type=None, signal_width=None, clock_write=None,
-                 clock_read=None, period=None, init_files=False):
+                 clock_read=None, period=None, init_files=False, signal_path=''):
+        self.type = signal_type
+        self.width = signal_width
         self.clock_write = clock_write or Tick()
         self.clock_read = clock_read or Tick()
         self.last_read_value = None
         self.period = period
-        self.type = signal_type
-        self.width = signal_width
+        self.signal_path = signal_path
 
         self.init_files = init_files
         if init_files:
