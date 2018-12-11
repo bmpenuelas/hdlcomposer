@@ -19,22 +19,10 @@ def get_parent(unit, indentation):
     while check_unit.indentation != indentation:
         check_unit = check_unit.parent
         found = True
-        
+
     if not found:
         raise ValueError('Parent not found.')
     return check_unit.parent
-
-
-
-def get_name_and_unit(line):
-    find_name_and_unit_result = re_find_name_and_unit.search(line)
-    if find_name_and_unit_result:
-        name = find_name_and_unit_result.group('name')
-        name = sub(r'\((?P<index>\d+)\)', '\\1', name)
-        unit = find_name_and_unit_result.group('unit')
-    else:
-        name, unit = ('', '')
-    return name, unit
 
 
 

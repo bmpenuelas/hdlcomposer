@@ -5,8 +5,8 @@ from ghdl_tools.utils import bin_str_to
 class Tick():
     """Clock shorthand
 
-    Using one or several Tick object makes it easy to synchronize the values of
-    the testbench signals.
+    Using one or several Tick objects makes synchronizing the values of the testbench
+    signals easy.
     """
 
     def __init__(self, initial_tick=0):
@@ -59,20 +59,24 @@ class Signal():
 
     Args:
         initial_value: Initialize the Signal.
-        clock: A clock can be provided to synchronize several signals or make writing
-               to this signals at different time frames more convenient.
         signal_type: Type of the signal. For example, when generating a package,
                      values will be casted to this type.
         signal_width: If signal_type has a fixed witdth, this parameter is used.
+        clock_write, clock_read: Clocks to assign or read the signal at different
+                                 ticks.
+        period (str time): Optionally define a time magnitude for each tick.
         init_files: Use a pair of time / value files to initialize the signal.
     """
 
     t = 0
     v = 1
 
-    def __init__(self, initial_value, signal_type=None, signal_width=None, clock=None,
-                 init_files=False):
-        self.clock = clock
+    def __init__(self, initial_value=None, signal_type=None, signal_width=None, clock_write=None,
+                 clock_read=None, period=None, init_files=False):
+        self.clock_write = clock_write or Tick()
+        self.clock_read = clock_read or Tick()
+        self.last_read_value = None
+        self.period = period
         self.type = signal_type
         self.width = signal_width
 
@@ -98,11 +102,8 @@ class Signal():
                         self.waveform.append([time, value])
                     else:
                         break
-        else:
+        elif initial_value != None:
             self.waveform = [[0, initial_value],]
-
-        self.next_read_tick = 0
-        self.last_read_value = None
 
 
 
@@ -171,17 +172,16 @@ class Signal():
     def append(self, new_value, current_tick=None):
         """Add a new value of the signal
 
-        If current_tick is provided, that will be used as the time value.
-        Otherwise, if there is a clock attached to this signal, it will
-        be used. If none of them are present, the new_value is appended one
-        tick after the last time value in the waveform.
+        If current_tick is provided, the write clock tick will be moved forward up to
+        current_tick.
         """
 
-        current_tick = current_tick or (self.clock.now if self.clock else None) or (self.len + 1)
-        if current_tick == self.last_t:
+        if current_tick:
+            self.clock_write.now = current_tick
+        if self.clock_write.now == self.last_t:
             self.waveform[-1][self.v] = new_value
         elif new_value != self.last_value:
-            self.waveform.append([current_tick, new_value])
+            self.waveform.append([self.clock_write.now, new_value])
 
 
 
@@ -194,25 +194,25 @@ class Signal():
 
         Returns:
             current_value: Value of the signal after reading a number of ticks.
-            transitions: List of [new value, time] for each transition within the provided
+            transitions: List of [new value, tick] for each transition within the provided
                          number of ticks.
             last_tick_read: Last tick that was read.
         """
 
         if reset:
-            self.next_read_tick = 0
+            self.clock_read.now = 0
             self.last_read_value = None
 
         transitions = []
         for i in range(ticks):
-            if self.next_read_tick <= self.last_t:
-                self.last_read_value, transition = self.get_value(self.next_read_tick, True)
+            if self.clock_read.now <= self.last_t:
+                self.last_read_value, transition = self.get_value(self.clock_read.now, True)
                 if transition:
-                    transitions.append([self.next_read_tick, self.last_read_value])
+                    transitions.append([self.clock_read.now, self.last_read_value])
             else:
                 break
-        self.next_read_tick += 1
-        return self.last_read_value, transitions, (self.next_read_tick - 1)
+        self.clock_read.tick()
+        return self.last_read_value, transitions, (self.clock_read.now - 1)
 
 
 
@@ -271,7 +271,7 @@ class Group():
         if attr in self.elements:
             return self.elements[attr]
         else:
-            raise AttributeError('There is no attribute or element called ' + attr)
+            raise AttributeError('There is no attribute or element called ' + str(attr))
 
 
 
