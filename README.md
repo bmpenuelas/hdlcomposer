@@ -1,4 +1,4 @@
-# HDL Composer
+# HDL Composer <img src="/docs/img/icon.png" alt="HDL Composer" width="48px">
 ### HDL simulation and autoverification made agile
 
 <br>
