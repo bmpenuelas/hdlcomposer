@@ -1,40 +1,6 @@
-from re import compile, sub, escape
+from re import (compile, escape)
 
 
-
-###############################################################################
-# REGULAR EXPRESSIONS
-###############################################################################
-
-# Parse GHDL output
-
-re_find_name_and_unit = compile('(?P<name>[\w|\(|\)|\.]+)\s\[(?P<unit>(if-generate|for-generate|instance|arch|entity|package)).*\]')
-
-def get_name_and_unit(line):
-    find_name_and_unit_result = re_find_name_and_unit.search(line)
-    if find_name_and_unit_result:
-        name = find_name_and_unit_result.group('name')
-        name = sub(r'\((?P<index>\d+)\)', '\\1', name)
-        unit = find_name_and_unit_result.group('unit')
-    else:
-        name, unit = ('', '')
-    return name, unit
-
-
-
-re_find_value = compile('(?P<value>(true|false))\]')
-
-re_find_indentation = compile('(?P<indentation>\W*)\w')
-
-re_index = compile('\((?P<index>\d+)\)')
-
-re_include_output = compile('(?P<type>(entity|package))\s(?P<name>\w+)')
-
-re_vend_srcs = compile('SourceDirectories\[(?P<name>\w+)\]\s*=\s*"(?P<path>(\w|\/|\.)+)')
-
-
-
-# Parse VCD
 
 def find_signal_name(line, name='', path='', is_array=False):
     if (not name in line) or (not path in line):

@@ -1,4 +1,4 @@
-from ghdl_tools.utils import bin_str_to
+from hdl_composer.utils.general import (bin_str_to)
 
 
 

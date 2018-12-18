@@ -1,19 +1,19 @@
-from   os                             import (getcwd, mkdir)
-from   os.path                        import (normpath, join, abspath,
-                                              exists, dirname, isabs, basename)
-from   sys                            import stdout
-from   shutil                         import rmtree
-from   platform                       import system
-from   json                           import (dump, load)
-from   math                           import ceil
+from os                             import (getcwd, mkdir)
+from os.path                        import (normpath, join, abspath,
+                                            exists, dirname, isabs, basename)
+from sys                            import (stdout)
+from shutil                         import (rmtree)
+from platform                       import (system)
+from json                           import (dump, load)
+from math                           import (ceil)
+from re                             import (compile)
 
-from   ghdl_tools.utils               import (run_console_command,
-                                              get_dirs_containing_files,
-                                              save_txt, get_filepaths_recursive,
-                                              gtkwave_open_wave, data_to_package)
-from   ghdl_tools.regular_expressions import re_vend_srcs
-from   ghdl_tools.parse               import (parse, parse_included)
-
+from hdl_composer.utils             import (run_console_command,
+                                            get_dirs_containing_files,
+                                            save_txt, get_filepaths_recursive,
+                                            gtkwave_open_wave)
+from hdl_composer.vhdl.utils        import (data_to_package)
+from hdl_composer.sim.ghdl.parse    import (parse_run, parse_included)
 
 
 
@@ -47,6 +47,8 @@ def compile_vendor(vendor_name, output_path, vendor_install_path, ghdl_install_p
     else:
         if verbose:
             stdout.write('Compiling ' + vendor_name + ' libraries...\n')
+
+    re_vend_srcs = compile('SourceDirectories\[(?P<name>\w+)\]\s*=\s*"(?P<path>(\w|\/|\.)+)')
 
     with open(join(ghdl_install_path, 'lib/vendors/config.sh'), 'r', encoding='utf-8') as settings_file:
         srcs_dir = {re_vend_srcs.search(line).group('name').lower(): re_vend_srcs.search(line).group('path')
@@ -478,7 +480,8 @@ class GHDL():
         """
 
         error, terminal_output = run_tb(entity, self.work_dir_path, 0, False)
-        return parse(terminal_output)
+        print(terminal_output)
+        return parse_run(terminal_output)
 
 
 

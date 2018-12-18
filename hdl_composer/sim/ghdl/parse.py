@@ -1,6 +1,29 @@
-from   re                             import sub
-from   ghdl_tools.regular_expressions import *
-from   ghdl_tools.vhdl_units          import *
+from re                      import (compile, sub)
+from hdl_composer.vhdl.units import *
+
+
+
+re_find_name_and_unit = compile('(?P<name>[\w|\(|\)|\.]+)\s\[(?P<unit>(if-generate|for-generate|instance|arch|entity|package)).*\]')
+
+re_find_value = compile('(?P<value>(true|false))\]')
+
+re_find_indentation = compile('(?P<indentation>\W*)\w')
+
+re_index = compile('\((?P<index>\d+)\)')
+
+re_include_output = compile('(?P<type>(entity|package))\s(?P<name>\w+)')
+
+
+
+def get_name_and_unit(line):
+    find_name_and_unit_result = re_find_name_and_unit.search(line)
+    if find_name_and_unit_result:
+        name = find_name_and_unit_result.group('name')
+        name = sub(r'\((?P<index>\d+)\)', '\\1', name)
+        unit = find_name_and_unit_result.group('unit')
+    else:
+        name, unit = ('', '')
+    return name, unit
 
 
 
@@ -40,12 +63,10 @@ def parse_included(include_terminal_output):
 
 
 
+def parse_run(ghdl_output):
+    """ Parse GHDL run output
+    """
 
-###############################################################################
-# PARSE GHDL OUTPUT
-###############################################################################
-
-def parse(ghdl_output):
     ghdl_output_lines = ghdl_output.splitlines()
     lines_to_process = len(ghdl_output_lines) - 2
 
@@ -103,8 +124,8 @@ def parse(ghdl_output):
         elif current_type == 'package':
             top.packages.append(current_name)
 
-        else:
-            raise ValueError('Error invalid unit type: ' + current_type)
+        # else:
+        #     raise ValueError('Error invalid unit type: ' + current_type)
 
 
         current_line += 1

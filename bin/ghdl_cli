@@ -3,7 +3,7 @@
 from   sys      import (argv, stderr, exit)
 from   argparse import ArgumentParser
 
-import ghdl_tools
+import hdl_composer
 
 
 
@@ -12,8 +12,8 @@ import ghdl_tools
 ###############################################################################
 
 # Command line interface
-parser = ArgumentParser(description="Running a GHDL simulation becomes as easy as: \
-                        ghdl_tools your_tb")
+parser = ArgumentParser(description="Running a simulation becomes as easy as: \
+                        ghdl_cli your_tb")
 
 # Optional arguments
 parser.add_argument("-v", "--verbose", dest="verbose",
@@ -104,7 +104,7 @@ args_dict            = vars(args)
 # Configure GHDL
 ###############################################################################
 
-ghdl = ghdl_tools.ghdl.GHDL(
+ghdl = hdl_composer.sim.ghdl.GHDL(
     verbose=args_dict['verbose'],
     install_path=args_dict['ghdl_install_path'] or None,
     vhdl_standard=args_dict['vhdl_standard'] or None,
