@@ -1,6 +1,6 @@
-from os.path            import (join)
+from os.path           import (join)
 
-from hdl_composer.utils import (int_tobin, data_to_pkg_cfg)
+from hdlcomposer.utils import (int_tobin, data_to_pkg_cfg)
 
 
 

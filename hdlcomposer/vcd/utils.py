@@ -1,6 +1,6 @@
-from vcdvcd                 import (VCDVCD)
+from vcdvcd                import (VCDVCD)
 
-from hdl_composer.vcd.parse import (find_signal_name)
+from hdlcomposer.vcd.parse import (find_signal_name)
 
 
 
@@ -48,7 +48,7 @@ def vcd_to_signals(vcd_path, signals='', module_path=''):
                         'dv':   Signal(this will be 'dut.Top/uMux/dv')}
     """
 
-    from hdl_composer.signals import Signal
+    from hdlcomposer.signals import Signal
 
     vcd = VCDVCD(vcd_path)
     signals_in_vcd = vcd.get_signals()

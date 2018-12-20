@@ -1,17 +1,19 @@
-from re                      import (compile, sub)
-from hdl_composer.vhdl.units import *
+from re                     import (compile, sub)
+from hdlcomposer.vhdl.units import *
 
 
 
-re_find_name_and_unit = compile('(?P<name>[\w|\(|\)|\.]+)\s\[(?P<unit>(if-generate|for-generate|instance|arch|entity|package)).*\]')
+re_find_name_and_unit = compile(r'(?P<name>[\w|\(|\)|\.]+)\s\[(?P<unit>(package|if-generate|for-generate|instance|arch|entity|process|port|signal)).*\]')
 
-re_find_value = compile('(?P<value>(true|false))\]')
+re_find_value = compile(r'(?P<value>(true|false))\]')
 
-re_find_indentation = compile('(?P<indentation>\W*)\w')
+re_find_direction = compile(r'(?P<direction>[a-z]+)\]')
 
-re_index = compile('\((?P<index>\d+)\)')
+re_find_indentation = compile(r'(?P<indentation>\W*)\w')
 
-re_include_output = compile('(?P<type>(entity|package))\s(?P<name>\w+)')
+re_index = compile(r'\((?P<index>\d+)\)')
+
+re_include_output = compile(r'(?P<type>(entity|package))\s(?P<name>\w+)')
 
 
 
@@ -55,6 +57,12 @@ def get_generate_value(line):
 
 
 
+def get_port_direction(line):
+    find_direction_result = re_find_direction.search(line)
+    return (find_direction_result.group('direction') if find_direction_result else None)
+
+
+
 def parse_included(include_terminal_output):
     result = []
     for find_result in re_include_output.finditer(include_terminal_output):
@@ -87,19 +95,23 @@ def parse_run(ghdl_output):
 
     # Get blocks by level of indentation
     current_unit = top.entity
+    previous_type = 'entity'
     previous_indentation = TAB
 
     while current_line < lines_to_process:
         current_indentation = get_indentation(ghdl_output_lines[current_line])
         current_name, current_type = get_name_and_unit(ghdl_output_lines[current_line])
 
-
-        # Add same level
-        if current_indentation == previous_indentation:
+        # Add to top
+        if current_indentation == 2:
+            current_parent = top.entity
+        # Add at the same level
+        elif current_indentation == previous_indentation:
             current_parent = current_unit.parent
         # Add inside previous
         elif current_indentation == previous_indentation + TAB:
-            current_parent = current_unit
+            if not previous_type == 'arch':
+                current_parent = current_unit
         # Search parent and add
         elif current_indentation < previous_indentation:
             current_parent = get_parent(current_unit, current_indentation)
@@ -107,28 +119,44 @@ def parse_run(ghdl_output):
             raise ValueError('Error processing indentation in line: ' + str(current_line + 1))
 
 
-        # Entities
-        if current_type == 'instance':
-            current_unit = Instance(name=current_name, parent=current_parent, indentation=current_indentation)
+        # Package
+        if current_type == 'package':
+            top.packages.append(current_name)
+
+        # Generate
+        elif current_type in GENERATE_STATEMENTS:
+            current_unit = Generate(name=current_name, parent=current_parent,
+                                    indentation=current_indentation,
+                                    value=get_generate_value(ghdl_output_lines[current_line]))
+
+        # Entity
+        elif current_type == 'instance':
+            current_unit = Instance(name=current_name, parent=current_parent,
+                                    indentation=current_indentation)
         elif current_type == 'entity':
-            current_unit = Entity(name=current_name, parent=current_parent, indentation=current_indentation)
+            current_unit = Entity(name=current_name, parent=current_parent,
+                                  indentation=current_indentation)
         elif current_type == 'arch':
             current_unit.arch = current_name
             current_unit.indentation = current_indentation
 
-        # Generates
-        elif current_type in GENERATE_STATEMENTS:
-            current_unit = Generate(name=current_name, parent=current_parent, indentation=current_indentation, value=get_generate_value(ghdl_output_lines[current_line]))
+        elif current_type == 'process':
+            current_unit = Process(name=current_name, parent=current_parent,
+                                   indentation=current_indentation)
+        elif current_type == 'port':
+            current_unit = Port(name=current_name, parent=current_parent,
+                                indentation=current_indentation,
+                                direction=get_port_direction(ghdl_output_lines[current_line]))
+        elif current_type == 'signal':
+            current_unit = Signal(name=current_name, parent=current_parent,
+                                  indentation=current_indentation)
 
-        # Packages
-        elif current_type == 'package':
-            top.packages.append(current_name)
-
-        # else:
-        #     raise ValueError('Error invalid unit type: ' + current_type)
+        else:
+            raise ValueError('Error invalid unit type: ' + current_type)
 
 
         current_line += 1
+        previous_type = current_type
         previous_indentation = current_indentation
 
 

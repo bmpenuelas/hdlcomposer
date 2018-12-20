@@ -8,13 +8,35 @@ GENERATE_STATEMENTS = ['if-generate', 'for-generate']
 ###############################################################################
 
 class Unit():
-    """Base unit with common properties
+    """ Base unit with common properties
     """
 
     def __init__(self, name, parent, indentation):
         self.name = name
         self.parent = parent
         self.indentation = indentation
+
+
+
+    @property
+    def type(self):
+        return self.__class__.__name__
+
+
+
+    def __repr__(self):
+        return self.type + ' ' + self.name
+
+
+
+    def __str__(self):
+        return self.name
+
+
+
+    @property
+    def children(self):
+        return []
 
 
 
@@ -33,28 +55,19 @@ class Unit():
 
 
 class Generate(Unit):
-    """If-generate or for-generate statements
+    """ if-generate or for-generate statements
     """
 
-    def __init__(self, name, parent, indentation, value, generates=None, instances=None):
+    def __init__(self, name, parent, indentation, value, generates=None,
+                 instances=None, processes=None):
         super().__init__(name, parent, indentation)
         self.value = value
         self.generates = generates or []
         self.instances = instances or []
+        self.processes = processes or []
         setattr(parent, name, self)
         parent.generates.append(self)
 
-
-    def __repr__(self):
-        return self.type + ' ' + self.name
-
-    def __str__(self):
-        return self.name
-
-
-    @property
-    def type(self):
-        return self.__class__.__name__
 
 
     @property
@@ -64,11 +77,11 @@ class Generate(Unit):
 
 
 class Entity(Unit):
-    """VHDL Entity
+    """ VHDL entity
     """
 
-    def __init__(self, name, parent, indentation, arch='', generates=None, instances=None,
-                 ports=None, signals=None, processes=None):
+    def __init__(self, name, parent, indentation, arch='', generates=None,
+                 instances=None, ports=None, signals=None, processes=None):
         super().__init__(name, parent, indentation)
         self.arch = arch
         self.generates = generates or []
@@ -80,17 +93,6 @@ class Entity(Unit):
         parent.entity = self
 
 
-    def __repr__(self):
-        return self.type + ' ' + self.name
-
-    def __str__(self):
-        return self.name
-
-
-    @property
-    def type(self):
-        return self.__class__.__name__
-
 
     @property
     def children(self):
@@ -99,27 +101,17 @@ class Entity(Unit):
 
 
 class Instance(Unit):
-    """Instance of a VHDL entity
+    """ Instance of a VHDL entity
     """
 
-    def __init__(self, name, indentation, parent=None, entity=None):
+    def __init__(self, name, indentation, parent=None, entity=None, ports=None):
         super().__init__(name, parent, indentation)
         self.entity = entity or {}
+        self.ports = ports or []
         if parent:
             setattr(parent, name, self)
             parent.instances.append(self)
 
-
-    def __repr__(self):
-        return self.type + ' ' + self.name
-
-    def __str__(self):
-        return self.name
-
-
-    @property
-    def type(self):
-        return self.__class__.__name__
 
 
     @property
@@ -128,8 +120,45 @@ class Instance(Unit):
 
 
 
+class Process(Unit):
+    """ VHDL process
+    """
+
+    def __init__(self, name, indentation, parent=None):
+        super().__init__(name, parent, indentation)
+        if parent:
+            setattr(parent, name, self)
+            parent.processes.append(self)
+
+
+
+class Port(Unit):
+    """ VHDL port
+    """
+
+    def __init__(self, name, indentation, direction, parent=None):
+        self.direction = direction
+        super().__init__(name, parent, indentation)
+        if parent:
+            setattr(parent, name, self)
+            parent.ports.append(self)
+
+
+
+class Signal(Unit):
+    """ VHDL signal
+    """
+
+    def __init__(self, name, indentation, parent=None):
+        super().__init__(name, parent, indentation)
+        if parent:
+            setattr(parent, name, self)
+            parent.signals.append(self)
+
+
+
 class Top(Instance):
-    """Top entity
+    """ Top entity
     """
 
     def __init__(self, name, packages=None):

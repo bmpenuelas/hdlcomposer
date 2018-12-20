@@ -76,7 +76,7 @@ def data_to_pkg_cfg(data):
               a Group instance.
     """
 
-    from hdl_composer.signals import (Group, Signal, Constant)
+    from hdlcomposer.signals import (Group, Signal, Constant)
     if isinstance(data, Group):
         elements = data.elements
     else:

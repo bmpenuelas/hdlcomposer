@@ -3,7 +3,7 @@
 from   sys      import (argv, stderr, exit)
 from   argparse import ArgumentParser
 
-import hdl_composer
+import hdlcomposer
 
 
 
@@ -104,12 +104,12 @@ args_dict            = vars(args)
 # Configure GHDL
 ###############################################################################
 
-ghdl = hdl_composer.sim.ghdl.GHDL(
+ghdl = hdlcomposer.sim.ghdl.GHDL(
     verbose=args_dict['verbose'],
     install_path=args_dict['ghdl_install_path'] or None,
     vhdl_standard=args_dict['vhdl_standard'] or None,
     work_dir_path=args_dict['workdir'] or None,
-    compiled_libs_paths=args_dict['compiled_libs_paths'] or None,
+    compiled_libs_paths=args_dict['compiled_libs_paths'] or ['./compiled'],
     always_reimport=(not args_dict['dont_reimport']),
     sources_directories=(args_dict['sources_directories'] or None),
     sources_paths=args_dict['source_files'] or None,
@@ -135,7 +135,7 @@ if compile_vendor:
 
 
 # Parse the architecture
-run_time = args_dict['run_time']
+run_time = args_dict['run_time'] or '1us'
 show_tree = args_dict['show_tree']
 if show_tree:
     ghdl.parse(show_output=True)

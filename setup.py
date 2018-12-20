@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(
-    name='hdl_composer',
+    name='hdlcomposer',
     version='0.2',
     description='HDL simulation and autoverification made agile',
     long_description=readme(),

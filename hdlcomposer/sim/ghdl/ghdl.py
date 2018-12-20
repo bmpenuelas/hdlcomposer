@@ -1,19 +1,19 @@
-from os                             import (getcwd, mkdir)
-from os.path                        import (normpath, join, abspath,
-                                            exists, dirname, isabs, basename)
-from sys                            import (stdout)
-from shutil                         import (rmtree)
-from platform                       import (system)
-from json                           import (dump, load)
-from math                           import (ceil)
-from re                             import (compile)
+from os                         import (getcwd, mkdir)
+from os.path                    import (normpath, join, abspath,
+                                        exists, dirname, isabs, basename)
+from sys                        import (stdout)
+from shutil                     import (rmtree)
+from platform                   import (system)
+from json                       import (dump, load)
+from math                       import (ceil)
+from re                         import (compile)
 
-from hdl_composer.utils             import (run_console_command,
-                                            get_dirs_containing_files,
-                                            save_txt, get_filepaths_recursive,
-                                            gtkwave_open_wave)
-from hdl_composer.vhdl.utils        import (data_to_package)
-from hdl_composer.sim.ghdl.parse    import (parse_run, parse_included)
+from hdlcomposer.utils          import (run_console_command,
+                                        get_dirs_containing_files,
+                                        save_txt, get_filepaths_recursive,
+                                        gtkwave_open_wave)
+from hdlcomposer.vhdl.utils     import (data_to_package)
+from hdlcomposer.sim.ghdl.parse import (parse_run, parse_included)
 
 
 
@@ -212,7 +212,7 @@ def run_tb(testbench_name, workdir, run_time='1us', generate_waveform=True):
                 else '',
         'time': ('--stop-time=' + run_time) \
                 if (run_time and not run_time == '0') \
-                else '--no-run --disp-tree=inst',
+                else '--no-run --disp-tree=port',
     }
     run_command = ' '.join(parameters.values())
     return run_console_command(run_command)
@@ -480,7 +480,6 @@ class GHDL():
         """
 
         error, terminal_output = run_tb(entity, self.work_dir_path, 0, False)
-        print(terminal_output)
         return parse_run(terminal_output)
 
 
