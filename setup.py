@@ -24,7 +24,7 @@ setup(
     install_requires=[
     ],
     scripts=[
-        'bin/ghdl_cli',
+        'bin/ghdl_cli/ghdl_cli',
     ],
     entry_points={
         'console_scripts': [
