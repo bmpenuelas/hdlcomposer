@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='hdlcomposer',
-    version='0.2',
+    version='0.31',
     description='HDL simulation and autoverification made agile',
     long_description=readme(),
     classifiers=[
@@ -14,12 +14,11 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='VHDL Verilog simulation verification parse hierarchy',
-    url='',
+    url='https://github.com/bmpenuelas/hdlcomposer',
     author='Borja Penuelas',
     author_email='bmpenuelas@gmail.com',
     license='MIT',
-    packages=[
-    ],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=[
     ],
