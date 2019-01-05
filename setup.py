@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='hdlcomposer',
-    version='0.31',
+    version='0.32',
     description='HDL simulation and autoverification made agile',
     long_description=readme(),
     classifiers=[
@@ -21,6 +21,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
+        'vcdvcd',
     ],
     scripts=[
         'bin/ghdl_cli/ghdl_cli',
