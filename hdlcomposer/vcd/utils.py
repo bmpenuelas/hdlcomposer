@@ -4,7 +4,7 @@ from hdlcomposer.vcd.parse import (find_signal_name)
 
 
 
-def vcd_get_signal_names(vcd_path):
+def get_signal_names(vcd_path):
     """Load a vcd file and return the list of signal names including path
     """
 
@@ -13,7 +13,7 @@ def vcd_get_signal_names(vcd_path):
 
 
 
-def vcd_get_data(vcd_path):
+def get_data(vcd_path):
     """Load a vcd file and return the list of signal names including path
     """
 

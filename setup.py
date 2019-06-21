@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='hdlcomposer',
-    version='0.32',
+    version='0.33',
     description='HDL simulation and autoverification made agile',
     long_description=readme(),
     classifiers=[
@@ -30,5 +30,4 @@ setup(
         'console_scripts': [
         ]
     },
-    zip_safe=False
 )
