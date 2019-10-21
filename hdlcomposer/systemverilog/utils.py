@@ -5,13 +5,13 @@ from hdlcomposer.utils import (int_tobin, data_to_pkg_cfg)
 
 
 def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2):
-    """Generate a VHDL package with the provided constants
+    """Generate a SystemVerilog package with the provided constants
 
     Data can be provided as integer, as a binary representation string, or even as
     a mix of the two.
     Width will be extended according to the type.
 
-    Supported types: boolean, std_logic, std_logic_vector, integer, signed, unsigned
+    Supported types: boolean, logic, logic_vector, integer, signed, unsigned
                      (and arrays of those types)
 
     Args:
@@ -25,7 +25,7 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
                 },
                 'constant_1': {
                     'data': [1, '0'],
-                    'type': 'std_logic'
+                    'type': 'logic'
                 },
                 'constant_2': {
                     'data': 8,
@@ -44,7 +44,7 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
                 },
                 'constant_5': {
                     'data': [24, 8932, '10101110110110', 142],
-                    'type': 'std_logic_vector',
+                    'type': 'logic_vector',
                     'width': 14,
                 },
             }
@@ -56,17 +56,12 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
         bool: The return value. True for error, False otherwise.
     """
 
-    file_path = join((output_directory or getcwd()), package_name + '.vhd')
+    file_path = join((output_directory or getcwd()), package_name + '.sv')
 
     package_text = []
     package_text.append('')
 
-    package_text.append('library   ieee;')
-    package_text.append('use       ieee.std_logic_1164.all;')
-    package_text.append('use       ieee.numeric_std.all;')
-    package_text.append('')
-
-    package_text.append('package ' + package_name + ' is')
+    package_text.append('package ' + package_name + ';')
     package_text.append('')
 
 
@@ -84,35 +79,18 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
         array_len = len(pkg_cfg[constant_name]['data'])
 
 
+        package_text[-1] += data_type
         if is_array:
-            package_text[-1] += 'type T_' + constant_name.upper() + ' is array(0 to '
-            package_text[-1] += str(array_len) + ' - 1) of '
-
-            if data_type in ('boolean', 'std_logic', 'integer'):
-                package_text[-1] += data_type + ';'
-            else:
-                package_text[-1] += data_type + '(' + str(data_w)
-                package_text[-1] += ' - 1 downto 0);'
-
-            package_text.append(' ' * 1 * indentation)
-
-
-        package_text[-1] += 'constant ' + constant_name.upper() + ' : '
-        if is_array:
-            package_text[-1] += 'T_' + constant_name.upper()
-        else:
-            if data_type in ('boolean', 'std_logic', 'integer'):
-                package_text[-1] += data_type
-            else:
-                package_text[-1] += data_type + '(' + str(data_w)
-                package_text[-1] += ' - 1 downto 0)'
-        package_text[-1] += ' := '
+            package_text[-1] += ' [' + str(array_len) + '-1:0]'
+        if data_type in ('logic', 'reg'):
+            package_text[-1] += '[' + str(data_w)
+            package_text[-1] += '-1:0]'
+        package_text[-1] += ' ' + constant_name
+        package_text[-1] += ' = '
 
 
         if is_array:
-            package_text[-1] += '('
-            if array_len == 1:
-                package_text[-1] += ' 0 => '
+            package_text[-1] += '{'
 
 
         for i in range(array_len):
@@ -121,16 +99,14 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
             if is_array:
                 package_text.append(' ' * 2 * indentation)
 
-            if data_type in 'boolean':
-                boolean_value = 'true' if (data_i and (isinstance(data_i, str) \
+            if data_type in ('boolean', 'logic', 'reg'):
+                boolean_value = '1' if (data_i and (isinstance(data_i, str) \
                                        and data_i.lower() not in ('false', '0'))) \
-                                       else 'false'
+                                       else '0'
                 package_text[-1] += boolean_value
-            elif data_type in 'std_logic':
-                package_text[-1] += '\'1\'' if data_i else '\'0\''
             elif data_type in 'integer':
                 package_text[-1] += str(data_i)
-            elif data_type in ('signed', 'unsigned', 'std_logic_vector'):
+            elif data_type in ('signed', 'unsigned', 'logic_vector'):
                 package_text[-1] += '"'
                 if isinstance(data_i, str):
                     if len(data_i) > data_w:
@@ -150,12 +126,12 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
 
         if is_array:
             package_text.append('')
-            package_text[-1] += ' ' * 1 * indentation + ')'
+            package_text[-1] += ' ' * 1 * indentation + '}'
         package_text[-1] += ';'
         package_text.append('')
 
 
-    package_text.append('end ' + package_name + ';')
+    package_text.append('endpackage')
 
 
     with open(file_path, 'w+') as f:
@@ -165,7 +141,7 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
 
 
 def data_to_package(signals, package_name, output_dir=None):
-        """Generate a VHDL package from a group of signals
+        """Generate a SystemVerilog package from a group of signals
         """
 
         generate_package(data_to_pkg_cfg(signals), package_name, output_dir)

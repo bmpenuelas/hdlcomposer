@@ -13,7 +13,7 @@ setup(
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
     ],
-    keywords='VHDL Verilog simulation verification parse hierarchy',
+    keywords='VHDL SystemVerilog simulation verification parse hierarchy',
     url='https://github.com/bmpenuelas/hdlcomposer',
     author='Borja Penuelas',
     author_email='bmpenuelas@gmail.com',

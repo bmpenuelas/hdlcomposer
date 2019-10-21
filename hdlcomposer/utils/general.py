@@ -1,3 +1,4 @@
+from re         import (sub)
 from os         import (listdir, walk, getcwd)
 from os.path    import (normpath, abspath, join, isdir)
 from subprocess import (check_output, Popen, DEVNULL, STDOUT, check_call,
@@ -60,8 +61,8 @@ def bin_str_to(bin_str, signal_type):
 
 
 
-def vd_files(signal_name, directory_path):
-    """Return a pair of typical file paths for a VHDL signal dump
+def tv_files(signal_name, directory_path):
+    """Return a pair of typical file paths for a signal time-value-change dump
     """
 
     return [join(directory_path, signal_name + '_t.out'), join(directory_path, signal_name + '_v.out')]
@@ -88,17 +89,18 @@ def data_to_pkg_cfg(data):
     pkg_cfg = {}
     for element_name in elements.keys():
         if isinstance(elements[element_name], Signal):
-            pkg_cfg[element_name.upper() + '_T'] = {
+            element_name_in_pkg = sub(r'[\[\]\(\)]', '', element_name)
+            pkg_cfg[element_name_in_pkg + '_t'] = {
                 'data': [data[Signal.t] for data in elements[element_name].waveform],
                 'type': 'integer',
             }
-            pkg_cfg[element_name.upper() + '_V'] = {
+            pkg_cfg[element_name_in_pkg + '_v'] = {
                 'data': [data[Signal.v] for data in elements[element_name].waveform],
                 'type': elements[element_name].type,
                 'width': elements[element_name].width,
             }
         elif isinstance(elements[element_name], Constant):
-            pkg_cfg[element_name.upper()] = {
+            pkg_cfg[element_name_in_pkg] = {
                 'data': elements[element_name].value,
                 'type': elements[element_name].type,
                 'width': elements[element_name].width,
