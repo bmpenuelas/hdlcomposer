@@ -67,9 +67,9 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
 
     for constant_name in pkg_cfg.keys():
         data_w = pkg_cfg[constant_name]['width'] if ('width' in pkg_cfg[constant_name].keys()) else None
+        data_w_s = str(data_w)
         data_type = pkg_cfg[constant_name]['type']
-
-        package_text.append(' ' * 1 * indentation)
+        element_name = pkg_cfg[constant_name]['element_name']
 
         if isinstance(pkg_cfg[constant_name]['data'], list):
             is_array = True
@@ -77,14 +77,22 @@ def generate_package(pkg_cfg, package_name, output_directory=None, indentation=2
             is_array = False
             pkg_cfg[constant_name]['data'] = [pkg_cfg[constant_name]['data']]
         array_len = len(pkg_cfg[constant_name]['data'])
+        array_len_s = str(array_len)
 
+        # Length constants
+        package_text.append(' ' * 1 * indentation)
+        if is_array:
+            package_text[-1] += 'localparam ' + element_name + '_l = ' + array_len_s + ';'
+        if data_type in ('logic', 'reg'):
+            package_text[-1] += 'localparam ' + element_name + '_w = ' + data_w_s + ';'
 
+        # Constant declaration
+        package_text.append(' ' * 1 * indentation)
         package_text[-1] += data_type
         if is_array:
-            package_text[-1] += ' [' + str(array_len) + '-1:0]'
+            package_text[-1] += ' [' + element_name + '_l' + '-1:0]'
         if data_type in ('logic', 'reg'):
-            package_text[-1] += '[' + str(data_w)
-            package_text[-1] += '-1:0]'
+            package_text[-1] += '[' + element_name + '_w' + '-1:0]' if (data_w > 1) else ''
         package_text[-1] += ' ' + constant_name
         package_text[-1] += ' = '
 

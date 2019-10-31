@@ -93,17 +93,20 @@ def data_to_pkg_cfg(data):
             pkg_cfg[element_name_in_pkg + '_t'] = {
                 'data': [data[Signal.t] for data in elements[element_name].waveform],
                 'type': 'integer',
+                'element_name': element_name_in_pkg,
             }
             pkg_cfg[element_name_in_pkg + '_v'] = {
                 'data': [data[Signal.v] for data in elements[element_name].waveform],
                 'type': elements[element_name].type,
                 'width': elements[element_name].width,
+                'element_name': element_name_in_pkg,
             }
         elif isinstance(elements[element_name], Constant):
             pkg_cfg[element_name_in_pkg] = {
                 'data': elements[element_name].value,
                 'type': elements[element_name].type,
                 'width': elements[element_name].width,
+                'element_name': element_name_in_pkg,
             }
     return pkg_cfg
 

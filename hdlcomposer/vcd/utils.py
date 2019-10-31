@@ -77,7 +77,7 @@ def vcd_to_signals(vcd_path, signals='', module_path=''):
                 if matches:
                     module_path.pop(signal_name)
                     result_signals[found_signal_name] = Signal(signal_type=data[identifier]['var_type'],
-                                                               signal_width=data[identifier]['size'],
+                                                               signal_width=int(data[identifier]['size']),
                                                                signal_path=vcd_signal_name)
                     result_signals[found_signal_name].waveform = [list(tv) for tv in data[identifier]['tv']]
                     break
